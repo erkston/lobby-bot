@@ -1,0 +1,25 @@
+{
+    "DiscordBotToken": "YOUR_SECRET_HERE",
+    "LobbyChannelName": "casual-lobbies",
+    "LobbyRole": "NA Casual Lobby",
+    "LobbyThreshold": "12",
+    "LobbyRestartThreshold": "6",
+    "NAservers":[
+      ["chi.servers.creators.tf", 27015],
+      ["chi.servers.creators.tf", 27017],
+      ["chi.servers.creators.tf", 27019],
+      ["chi.servers.creators.tf", 27021]
+    ],
+    "ReactionEmojis":[
+      "\uD83E\uDD20",
+      "\uD83E\uDD16",
+      "\uD83D\uDE3B",
+      "\uD83D\uDC75"
+    ],
+    "ReactionIntervals":[
+      "30m",
+      "1h",
+      "2h",
+      "4h"
+    ]
+}

@@ -1,5 +1,5 @@
 {
-    "DiscordBotToken": "YOUR_SECRET_HERE",
+    "DiscordBotToken": "YOUR_TOKEN_HERE",
     "LobbyChannelName": "casual-lobbies",
     "LobbyRole": "NA Casual Lobby",
     "LobbyThreshold": "12",

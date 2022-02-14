@@ -1,7 +1,13 @@
 ## lil-lobby-bot
 This is a discord bot designed to place users into a "lobby" that sends players to a server once a set amount have joined. 
 Users join the lobby by clicking a reaction in discord, different reactions have different lengths of time for the bot to wait before they remove the user (or until the lobby is full and "launches").
-The bot reads the number of current players on the servers and adds that to the number of players waiting in discord, and alerts when that total meets a threshold. 
+
+![Example lobby](https://i.imgur.com/Zxvdfil.png)
+
+The bot reads the number of current players on the servers and adds that to the number of players waiting in discord, and alerts when that total meets a threshold:
+
+![Example alert](https://i.imgur.com/ATHpA3z.png)
+
 Made for TF2 but should work with anything compatible with python-a2s.
 ## Discord set-up
 The bot requires the following permissions: Manage Roles, Send Messages, Manage Messages, Embed Links, Add Reactions. It also requires the "Members" Privileged Gateway Intent.

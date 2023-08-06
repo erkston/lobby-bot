@@ -16,15 +16,15 @@ LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
 LobbyThreshold = config['LobbyThreshold']
 LobbyRestartThreshold = config['LobbyRestartThreshold']
-NAservers = config['NAservers']
+Servers = config['Servers']
 ReactionEmojis = config['ReactionEmojis']
 ReactionIntervals = config['ReactionIntervals']
 
 # declaring other stuff
 ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
-NAserverinfo = []
-NALobbyActive = False
+serverinfo = []
+LobbyActive = False
 allowed_mentions = discord.AllowedMentions(roles=True)
 
 
@@ -55,12 +55,12 @@ class DiscordBot(discord.Client):
         print('------------------------------------------------------')
         print(f'Shutting down {client.user}...')
         print("Cleaning up messages...")
-        lobby_message = NA_lobby_message
+        lobby_message = LOBBYMESSAGE
         await lobby_message.delete()
         print("Removing roles...")
         for member in lobby_role.members:
             await member.remove_roles(lobby_role)
-        if NALobbyActive:
+        if LobbyActive:
             await active_lobby_message.delete()
 
     async def close(self):
@@ -102,7 +102,7 @@ async def on_ready():
 
     await initialize_lobby_message()
 
-    await mainloop.start(NA_lobby_message)
+    await mainloop.start(LOBBYMESSAGE)
 
 
 # force update server info and refresh discord message every minute
@@ -114,37 +114,37 @@ async def mainloop(lobby_message):
 
 async def initialize_lobby_message():
     embed = discord.Embed(title='Reticulating Splines...', color=0xfd8002)
-    global NA_lobby_message
-    NA_lobby_message = await lobby_channel.send(embed=embed)
+    global LOBBYMESSAGE
+    LOBBYMESSAGE = await lobby_channel.send(embed=embed)
     for emoji in ReactionEmojis:
-        await NA_lobby_message.add_reaction(emoji)
-    print(f'Lobby message ID {NA_lobby_message.id}')
+        await LOBBYMESSAGE.add_reaction(emoji)
+    print(f'Lobby message ID {LOBBYMESSAGE.id}')
 
 
 # function to update server, only runs in mainloop (once per minute) and should not be called otherwise
 async def update_servers():
     print(f'Updating server information...')
-    global NAserverinfo
-    for i in range(len(NAservers)):
-        NAserverinfo.append(a2s.info(tuple(NAservers[i])))
-        print(f'{NAserverinfo[i].server_name} currently has {NAserverinfo[i].player_count} players')
+    global serverinfo
+    for i in range(len(Servers)):
+        serverinfo.append(a2s.info(tuple(Servers[i])))
+        print(f'{serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
 
 
 # main function for evaluating server info and updating lobby message
 # does NOT refresh server info as it would ping servers very frequently
 async def update_msg(lobby_message):
     # needed if the message has changed since first run
-    lobby_message = NA_lobby_message
+    lobby_message = LOBBYMESSAGE
     # determine most full server to populate once the lobby is full
-    NAtargetindex = 0
-    for i in range(len(NAserverinfo)):
-        if NAserverinfo[i].player_count > NAserverinfo[NAtargetindex].player_count:
-            NAtargetindex = i
+    targetindex = 0
+    for i in range(len(serverinfo)):
+        if serverinfo[i].player_count > serverinfo[targetindex].player_count:
+            targetindex = i
     # embeds won't let you do this directly
-    CurrentServerPlayers = NAserverinfo[NAtargetindex].player_count
+    CurrentServerPlayers = serverinfo[targetindex].player_count
     DiscordersRequired = int(LobbyThreshold) - CurrentServerPlayers
     print(
-        f'Current target server is {NAserverinfo[NAtargetindex].server_name} with {CurrentServerPlayers} players online')
+        f'Current target server is {serverinfo[targetindex].server_name} with {CurrentServerPlayers} players online')
     await update_lobby_members()
     # pause a second for members to update
     await asyncio.sleep(1)
@@ -156,7 +156,7 @@ async def update_msg(lobby_message):
     if not LobbyMembersString:
         LobbyMembersString = "None"
     # if the threshold is not met AND lobby is not already active, display lobby info in embed
-    if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and NALobbyActive is False:
+    if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and LobbyActive is False:
         print(f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}) or lobby still active, displaying lobby information')
         embed = discord.Embed(title='🇺🇸 NA Central Casual Lobby',
                               description='Pings will be sent once ' + LobbyThreshold + ' players are ready. \n Currently ' + str(
@@ -175,17 +175,17 @@ async def update_msg(lobby_message):
         print(f'Lobby message updated ' + now.strftime("%Y-%m-%d %H:%M:%S"))
     else:
         print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
-        await activate_lobby(lobby_message, NAtargetindex)
+        await activate_lobby(lobby_message, targetindex)
     return
 
 
 # runs when lobby threshold is met
-async def activate_lobby(lobby_message, NAtargetindex):
-    global NALobbyActive
+async def activate_lobby(lobby_message, targetindex):
+    global LobbyActive
     global active_lobby_message
     # check if the lobby has previously been launched (to prevent multiple notifications)
-    if not NALobbyActive:
-        NALobbyActive = True
+    if not LobbyActive:
+        LobbyActive = True
         # delete old lobby message and send a new message (can't notify role members in edits)
         await lobby_message.delete()
         now = datetime.datetime.now()
@@ -193,8 +193,8 @@ async def activate_lobby(lobby_message, NAtargetindex):
         # new message with role mention to notify lobby members
         # no mentions allowed in embeds, so it has to be ugly :(
 
-        ConnectString = "".join(["steam://connect/", str(NAservers[NAtargetindex][0]), ":", str(NAservers[NAtargetindex][1])])
-        active_lobby_message = await lobby_channel.send(f'{lobby_role.mention} \n**GET IN HERE!**\n\n{NAserverinfo[NAtargetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
+        ConnectString = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
+        active_lobby_message = await lobby_channel.send(f'{lobby_role.mention} \n**GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
         # wait 5 minutes for people to connect
@@ -203,18 +203,18 @@ async def activate_lobby(lobby_message, NAtargetindex):
         for member in lobby_role.members:
             await member.remove_roles(lobby_role)
         # don't reactivate lobby until we fall below the restart threshold
-        if NAserverinfo[NAtargetindex].player_count > int(LobbyRestartThreshold):
+        if serverinfo[targetindex].player_count > int(LobbyRestartThreshold):
             print(f'Lobby active and minimum threshold is met, sleeping some more')
             await asyncio.sleep(60)
         else:
             # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
             print(f'Lobby active but we fell below the minimum player threshold, cleaning up and restarting lobby...')
             await active_lobby_message.delete()
-            NALobbyActive = False
+            LobbyActive = False
             for member in lobby_role.members:
                 await member.remove_roles(lobby_role)
             await initialize_lobby_message()
-            await update_msg(NA_lobby_message)
+            await update_msg(LOBBYMESSAGE)
     else:
         # if we are here that means the lobby threshold is met, but notifications have already been sent, do nothing
         return
@@ -233,7 +233,7 @@ async def update_lobby_members():
 @client.event
 async def on_reaction_add(reaction, member):
     if not member.bot:
-        if reaction.message.id == NA_lobby_message.id:
+        if reaction.message.id == LOBBYMESSAGE.id:
             for i in range(len(ReactionEmojis)):
                 if reaction.emoji == ReactionEmojis[i]:
                     # if user is already in lobby, remove this reaction but keep them in the lobby
@@ -244,12 +244,12 @@ async def on_reaction_add(reaction, member):
                         # wait 2 seconds for the reaction remove event to complete before putting member back in lobby
                         await asyncio.sleep(2)
                         await member.add_roles(lobby_role)
-                        await update_msg(NA_lobby_message)
+                        await update_msg(LOBBYMESSAGE)
                     else:
                         # if member is not in lobby, put them there
                         await member.add_roles(lobby_role)
                         print(f'User {member.name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
-                        await update_msg(NA_lobby_message)
+                        await update_msg(LOBBYMESSAGE)
                         await asyncio.sleep(ReactionIntervalsSeconds[i])
                         # after the selected time has passed, check if they are still in the lobby
                         await update_lobby_members()
@@ -271,12 +271,12 @@ async def on_reaction_add(reaction, member):
 # so this should be kept as simple as possible
 @client.event
 async def on_reaction_remove(reaction, member):
-    if reaction.message.id == NA_lobby_message.id:
+    if reaction.message.id == LOBBYMESSAGE.id:
         for i in range(len(ReactionEmojis)):
             if reaction.emoji == ReactionEmojis[i]:
                 await member.remove_roles(lobby_role)
                 print(f'User {member.name} removed from "{lobby_role.name}"')
-                await update_msg(NA_lobby_message)
+                await update_msg(LOBBYMESSAGE)
 
 
 client.run(DiscordBotToken)

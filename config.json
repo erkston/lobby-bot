@@ -4,7 +4,7 @@
     "LobbyRole": "NA Casual Lobby",
     "LobbyThreshold": "12",
     "LobbyRestartThreshold": "6",
-    "NAservers":[
+    "Servers":[
       ["chi.servers.creators.tf", 27015],
       ["chi.servers.creators.tf", 27017],
       ["chi.servers.creators.tf", 27019],

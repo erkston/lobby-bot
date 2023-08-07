@@ -55,13 +55,15 @@ class DiscordBot(discord.Client):
         print('------------------------------------------------------')
         print(f'Shutting down {client.user}...')
         print("Cleaning up messages...")
-        lobby_message = LOBBYMESSAGE
-        await lobby_message.delete()
+        if LobbyActive:
+            await active_lobby_message.delete()
+        else:
+            lobby_message = LOBBYMESSAGE
+            await lobby_message.delete()
         print("Removing roles...")
         for member in lobby_role.members:
             await member.remove_roles(lobby_role)
-        if LobbyActive:
-            await active_lobby_message.delete()
+
 
     async def close(self):
         await self.cleanup()
@@ -121,10 +123,12 @@ async def initialize_lobby_message():
     print(f'Lobby message ID {LOBBYMESSAGE.id}')
 
 
-# function to update server, only runs in mainloop (once per minute) and should not be called otherwise
+# function to update server, only runs in mainloop and activate_lobby (once per minute)
+# and should not be called otherwise
 async def update_servers():
     print(f'Updating server information...')
     global serverinfo
+    serverinfo.clear()
     for i in range(len(Servers)):
         serverinfo.append(a2s.info(tuple(Servers[i])))
         print(f'{serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
@@ -157,8 +161,8 @@ async def update_msg(lobby_message):
         LobbyMembersString = "None"
     # if the threshold is not met AND lobby is not already active, display lobby info in embed
     if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and LobbyActive is False:
-        print(f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}) or lobby still active, displaying lobby information')
-        embed = discord.Embed(title='🇺🇸 NA Central Casual Lobby',
+        print(f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}), displaying lobby information')
+        embed = discord.Embed(title='🇺🇸 Atlanta Regulars Lobby',
                               description='Pings will be sent once ' + LobbyThreshold + ' players are ready. \n Currently ' + str(
                                   CurrentServerPlayers) + ' player(s) in-game and ' + str(
                                   DiscordersRequired) + ' more needed here!',
@@ -174,8 +178,11 @@ async def update_msg(lobby_message):
         now = datetime.datetime.now()
         print(f'Lobby message updated ' + now.strftime("%Y-%m-%d %H:%M:%S"))
     else:
-        print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
-        await activate_lobby(lobby_message, targetindex)
+        if LobbyActive is True:
+            print(f'Lobby previously activated, doing nothing')
+        else:
+                print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
+                await activate_lobby(lobby_message, targetindex)
     return
 
 
@@ -194,29 +201,32 @@ async def activate_lobby(lobby_message, targetindex):
         # no mentions allowed in embeds, so it has to be ugly :(
 
         ConnectString = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
-        active_lobby_message = await lobby_channel.send(f'{lobby_role.mention} \n**GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
+        active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} \n**GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
         # wait 5 minutes for people to connect
-        await asyncio.sleep(20)
+        print(f'Sleeping 5 minutes to allow people to connect')
+        await asyncio.sleep(300)
         # remove role now so the logic doesn't double count everyone who joins the server
         for member in lobby_role.members:
             await member.remove_roles(lobby_role)
         # don't reactivate lobby until we fall below the restart threshold
-        if serverinfo[targetindex].player_count > int(LobbyRestartThreshold):
-            print(f'Lobby active and minimum threshold is met, sleeping some more')
+        while serverinfo[targetindex].player_count > int(LobbyRestartThreshold):
+            print(f'Lobby active and minimum threshold is met ({serverinfo[targetindex].player_count}>{LobbyRestartThreshold}), sleeping some more')
             await asyncio.sleep(60)
-        else:
-            # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
-            print(f'Lobby active but we fell below the minimum player threshold, cleaning up and restarting lobby...')
-            await active_lobby_message.delete()
-            LobbyActive = False
-            for member in lobby_role.members:
-                await member.remove_roles(lobby_role)
-            await initialize_lobby_message()
-            await update_msg(LOBBYMESSAGE)
+            await update_servers()
+
+        # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
+        print(f'Lobby active but we fell below the minimum player threshold, cleaning up and restarting lobby...')
+        await active_lobby_message.delete()
+        LobbyActive = False
+        for member in lobby_role.members:
+            await member.remove_roles(lobby_role)
+        await initialize_lobby_message()
+        await update_msg(LOBBYMESSAGE)
     else:
         # if we are here that means the lobby threshold is met, but notifications have already been sent, do nothing
+        print(f'Lobby active but pings have already been sent, doing nothing...')
         return
 
 
@@ -226,7 +236,8 @@ async def update_lobby_members():
     global CurrentLobbyMembers
     CurrentLobbyMembers = []
     for member in lobby_role.members:
-        CurrentLobbyMembers.append(member.name)
+        # member.nick may have some invalid characters that the bot doesn't like, if issues use member.name
+        CurrentLobbyMembers.append(str(member.nick))
 
 
 # main function for catching user reactions

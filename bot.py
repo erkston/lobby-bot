@@ -25,6 +25,7 @@ ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 serverinfo = []
 LobbyActive = False
+UpdatingServerInfo = False
 allowed_mentions = discord.AllowedMentions(roles=True)
 
 
@@ -126,12 +127,14 @@ async def initialize_lobby_message():
 # function to update server, only runs in mainloop and activate_lobby (once per minute)
 # and should not be called otherwise
 async def update_servers():
+    UpdatingServerInfo = True
     print(f'Updating server information...')
     global serverinfo
     serverinfo.clear()
     for i in range(len(Servers)):
         serverinfo.append(a2s.info(tuple(Servers[i])))
         print(f'{serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
+    UpdatingServerInfo = False
 
 
 # main function for evaluating server info and updating lobby message
@@ -181,8 +184,11 @@ async def update_msg(lobby_message):
         if LobbyActive is True:
             print(f'Lobby previously activated, doing nothing')
         else:
-                print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
-                await activate_lobby(lobby_message, targetindex)
+            while UpdatingServerInfo:
+                print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')
+                await asyncio.sleep(3)
+            print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
+            await activate_lobby(lobby_message, targetindex)
     return
 
 
@@ -207,9 +213,11 @@ async def activate_lobby(lobby_message, targetindex):
         # wait 5 minutes for people to connect
         print(f'Sleeping 5 minutes to allow people to connect')
         await asyncio.sleep(300)
+        print(f'My nap is over! Removing all role members...')
         # remove role now so the logic doesn't double count everyone who joins the server
         for member in lobby_role.members:
             await member.remove_roles(lobby_role)
+            print(f'Removed {member.name} from {lobby_role.name}')
         # don't reactivate lobby until we fall below the restart threshold
         while serverinfo[targetindex].player_count > int(LobbyRestartThreshold):
             print(f'Lobby active and minimum threshold is met ({serverinfo[targetindex].player_count}>{LobbyRestartThreshold}), sleeping some more')

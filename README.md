@@ -16,6 +16,7 @@ The server should have a dedicated channel and role as well (see config below)
 - DiscordBotToken - Your bots token from the Discord Developer Portal
 - LobbyChannelName - The Channel name the bot should use to send messages
 - LobbyRole - The Role name the bot should use to alert people once the lobby is full
+- PersistentLobbyRole - A separate Role that will always be pinged when the lobby is full. Role members are not removed automatically (as they are for LobbyRole) so members of this role will  always be notified when a lobby fills without having to enter the lobby themselves. Members of this role are not considered in the math that determines when the lobby is full.
 - LobbyThreshold - The number of players the bot should wait for before sending discord pings. This is total players including any already on the server
 - LobbyRestartThreshold - The bot will wait until the number of players on the server falls below this number to reset and start a new discord lobby
 - Servers - List of servers to check, can be any number of servers as long as the syntax is preserved.

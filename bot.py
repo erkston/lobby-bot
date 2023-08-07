@@ -14,6 +14,7 @@ with open("config.json", "r") as jsonfile:
 DiscordBotToken = config['DiscordBotToken']
 LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
+PersistentLobbyRole = config['PersistentLobbyRole']
 LobbyThreshold = config['LobbyThreshold']
 LobbyRestartThreshold = config['LobbyRestartThreshold']
 Servers = config['Servers']
@@ -95,11 +96,15 @@ async def on_ready():
 
     # iterate through roles to find the one that matches the name in the config
     global lobby_role
+    global persistent_lobby_role
     for guild in client.guilds:
         for role in guild.roles:
             if role.name == LobbyRole:
                 lobby_role = role
-                print(f'Role found: "{lobby_role.name}" (ID: {lobby_role.id})')
+                print(f'Lobby Role found: "{lobby_role.name}" (ID: {lobby_role.id})')
+            if role.name == PersistentLobbyRole:
+                persistent_lobby_role = role
+                print(f'Persistent Role found: "{persistent_lobby_role.name}" (ID: {persistent_lobby_role.id})')
 
     print('------------------------------------------------------')
 
@@ -207,7 +212,7 @@ async def activate_lobby(lobby_message, targetindex):
         # no mentions allowed in embeds, so it has to be ugly :(
 
         ConnectString = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
-        active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} \n**GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
+        active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
         # wait 5 minutes for people to connect

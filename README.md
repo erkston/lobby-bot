@@ -10,7 +10,7 @@ The bot reads the number of current players on the servers and adds that to the 
 
 Made for TF2 but should work with anything compatible with python-a2s.
 ## Discord set-up
-The bot requires the following permissions: Manage Roles, Send Messages, Manage Messages, Embed Links, Add Reactions. It also requires the "Members" Privileged Gateway Intent.
+The bot requires the following permissions: Manage Roles, Send Messages, Manage Messages, Embed Links, Add Reactions. It also requires the "Members" Privileged Gateway Intent, and permission to mention roles.
 The server should have a dedicated channel and role as well (see config below)
 ## Configuration
 - DiscordBotToken - Your bots token from the Discord Developer Portal

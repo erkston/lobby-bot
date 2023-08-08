@@ -145,56 +145,57 @@ async def update_servers():
 # main function for evaluating server info and updating lobby message
 # does NOT refresh server info as it would ping servers very frequently
 async def update_msg(lobby_message):
-    # needed if the message has changed since first run
-    lobby_message = LOBBYMESSAGE
-    # determine most full server to populate once the lobby is full
-    targetindex = 0
-    for i in range(len(serverinfo)):
-        if serverinfo[i].player_count > serverinfo[targetindex].player_count:
-            targetindex = i
-    # embeds won't let you do this directly
-    CurrentServerPlayers = serverinfo[targetindex].player_count
-    DiscordersRequired = int(LobbyThreshold) - CurrentServerPlayers
-    print(
-        f'Current target server is {serverinfo[targetindex].server_name} with {CurrentServerPlayers} players online')
-    await update_lobby_members()
-    # pause a second for members to update
-    await asyncio.sleep(1)
-    # get lobby members and format into nice string for discord embed
-    CurrentLobbySize = len(CurrentLobbyMembers)
-    s = ", "
-    LobbyMembersString = s.join(CurrentLobbyMembers)
-    # if no members display "None" in discord
-    if not LobbyMembersString:
-        LobbyMembersString = "None"
-    # if the threshold is not met AND lobby is not already active, display lobby info in embed
-    if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and LobbyActive is False:
-        print(f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}), displaying lobby information')
-        embed = discord.Embed(title='🇺🇸 Atlanta Regulars Lobby',
-                              description='Pings will be sent once ' + LobbyThreshold + ' players are ready. \n Currently ' + str(
-                                  CurrentServerPlayers) + ' player(s) in-game and ' + str(
-                                  DiscordersRequired) + ' more needed here!',
-                              color=0xfd8002)
-        embed.add_field(name='Players in lobby (' + str(CurrentLobbySize) + "/" + str(
-                                  DiscordersRequired) + '):', value=LobbyMembersString,
-                        inline=False)
-        embed.add_field(name='\u200b', value='\u200b', inline=False)
-        embed.add_field(name='React below to join!', value=IntervalsString, inline=False)
-        embed.timestamp = datetime.datetime.now()
-        embed.set_footer(text='Last updated')
-        await lobby_message.edit(embed=embed)
-        now = datetime.datetime.now()
-        print(f'Lobby message updated ' + now.strftime("%Y-%m-%d %H:%M:%S"))
+    if LobbyActive is True:
+        print(f'Lobby is active, no need to update message')
+        return
     else:
-        if LobbyActive is True:
-            print(f'Lobby previously activated, doing nothing')
+        # needed if the message has changed since first run
+        lobby_message = LOBBYMESSAGE
+        # determine most full server to populate once the lobby is full
+        targetindex = 0
+        for i in range(len(serverinfo)):
+            if serverinfo[i].player_count > serverinfo[targetindex].player_count:
+                targetindex = i
+        # embeds won't let you do this directly
+        CurrentServerPlayers = serverinfo[targetindex].player_count
+        DiscordersRequired = int(LobbyThreshold) - CurrentServerPlayers
+        print(
+            f'Current target server is {serverinfo[targetindex].server_name} with {CurrentServerPlayers} players online')
+        await update_lobby_members()
+        # pause a second for members to update
+        await asyncio.sleep(1)
+        # get lobby members and format into nice string for discord embed
+        CurrentLobbySize = len(CurrentLobbyMembers)
+        s = ", "
+        LobbyMembersString = s.join(CurrentLobbyMembers)
+        # if no members display "None" in discord
+        if not LobbyMembersString:
+            LobbyMembersString = "None"
+        # if the threshold is not met AND lobby is not already active, display lobby info in embed
+        if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and LobbyActive is False:
+            print(f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}), displaying lobby information')
+            embed = discord.Embed(title='🇺🇸 Atlanta Regulars Lobby',
+                                  description='Pings will be sent once ' + LobbyThreshold + ' players are ready. \n Currently ' + str(
+                                      CurrentServerPlayers) + ' player(s) in-game and ' + str(
+                                      DiscordersRequired) + ' more needed here!',
+                                  color=0xfd8002)
+            embed.add_field(name='Players in lobby (' + str(CurrentLobbySize) + "/" + str(
+                                      DiscordersRequired) + '):', value=LobbyMembersString,
+                            inline=False)
+            embed.add_field(name='\u200b', value='\u200b', inline=False)
+            embed.add_field(name='React below to join!', value=IntervalsString, inline=False)
+            embed.timestamp = datetime.datetime.now()
+            embed.set_footer(text='Last updated')
+            await lobby_message.edit(embed=embed)
+            now = datetime.datetime.now()
+            print(f'Lobby message updated ' + now.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-            while UpdatingServerInfo:
-                print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')
-                await asyncio.sleep(3)
-            print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
-            await activate_lobby(lobby_message, targetindex)
-    return
+                while UpdatingServerInfo:
+                    print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')
+                    await asyncio.sleep(3)
+                print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
+                await activate_lobby(lobby_message, targetindex)
+        return
 
 
 # runs when lobby threshold is met
@@ -217,7 +218,7 @@ async def activate_lobby(lobby_message, targetindex):
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
         # wait 5 minutes for people to connect
         print(f'Sleeping 10 minutes to allow people to connect')
-        await asyncio.sleep(600)
+        await asyncio.sleep(10)
         print(f'My nap is over! Removing all role members...')
         # remove role now so the logic doesn't double count everyone who joins the server
         for member in lobby_role.members:
@@ -226,17 +227,18 @@ async def activate_lobby(lobby_message, targetindex):
         # don't reactivate lobby until we fall below the restart threshold
         while serverinfo[targetindex].player_count > int(LobbyRestartThreshold):
             print(f'Lobby active and minimum threshold is met ({serverinfo[targetindex].player_count}>{LobbyRestartThreshold}), sleeping some more')
+            # main loop should continue updating server info
             await asyncio.sleep(60)
-            await update_servers()
-
-        # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
-        print(f'Lobby active but we fell below the minimum player threshold, cleaning up and restarting lobby...')
-        await active_lobby_message.delete()
-        LobbyActive = False
-        for member in lobby_role.members:
-            await member.remove_roles(lobby_role)
-        await initialize_lobby_message()
-        await update_msg(LOBBYMESSAGE)
+        if serverinfo[targetindex].player_count <= int(LobbyRestartThreshold):
+            # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
+            print(f'Lobby active but we fell below the minimum player threshold, cleaning up and restarting lobby...')
+            await active_lobby_message.delete()
+            LobbyActive = False
+            for member in lobby_role.members:
+                await member.remove_roles(lobby_role)
+            await initialize_lobby_message()
+            await update_msg(LOBBYMESSAGE)
+            return
     else:
         # if we are here that means the lobby threshold is met, but notifications have already been sent, do nothing
         print(f'Lobby active but pings have already been sent, doing nothing...')

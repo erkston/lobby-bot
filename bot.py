@@ -25,6 +25,7 @@ ReactionIntervals = config['ReactionIntervals']
 ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 serverinfo = []
+CurrentLobbyMembers = []
 LobbyActive = False
 UpdatingServerInfo = False
 allowed_mentions = discord.AllowedMentions(roles=True)
@@ -249,11 +250,16 @@ async def activate_lobby(lobby_message, targetindex):
 # refreshes list of lobby members
 # why is this a separate function? i forget
 async def update_lobby_members():
-    global CurrentLobbyMembers
-    CurrentLobbyMembers = []
+    CurrentLobbyMembers.clear()
     for member in lobby_role.members:
         # member.nick may have some invalid characters that the bot doesn't like, if issues use member.name
-        CurrentLobbyMembers.append(str(member.nick))
+        # if a user doesn't have a defined nick we need to fall back and use member.name
+        if not member.nick:
+            CurrentLobbyMembers.append(str(member.name))
+            print(f'Added {member.name} to list of lobby members (member.name)')
+        else:
+            CurrentLobbyMembers.append(str(member.nick))
+            print(f'Added {member.nick} to list of lobby members (member.nick)')
 
 
 # main function for catching user reactions

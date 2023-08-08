@@ -221,7 +221,7 @@ async def activate_lobby(lobby_message, targetindex):
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
         # wait for people to connect
-        print(f'Sleeping for {LobbyCooldown} to allow people to connect')
+        print(f'Sleeping for {LobbyCooldown} to prevent frequent pings')
         await asyncio.sleep(LobbyCooldownSeconds)
         print(f'My nap is over! Removing all role members...')
         # remove role now so the logic doesn't double count everyone who joins the server

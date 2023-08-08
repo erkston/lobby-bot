@@ -16,6 +16,7 @@ LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
 PersistentLobbyRole = config['PersistentLobbyRole']
 LobbyThreshold = config['LobbyThreshold']
+LobbyCooldown = config['LobbyCooldown']
 LobbyRestartThreshold = config['LobbyRestartThreshold']
 Servers = config['Servers']
 ReactionEmojis = config['ReactionEmojis']
@@ -41,6 +42,8 @@ def convert_to_seconds(s):
 
 for interval in ReactionIntervals:
     ReactionIntervalsSeconds.append(convert_to_seconds(interval))
+
+LobbyCooldownSeconds = convert_to_seconds(LobbyCooldown)
 
 # convert config emojis into a string for discord embed message (once)
 IntervalsString = ""
@@ -217,9 +220,9 @@ async def activate_lobby(lobby_message, targetindex):
         active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
-        # wait 10 minutes for people to connect
-        print(f'Sleeping 10 minutes to allow people to connect')
-        await asyncio.sleep(600)
+        # wait for people to connect
+        print(f'Sleeping for {LobbyCooldown} to allow people to connect')
+        await asyncio.sleep(LobbyCooldownSeconds)
         print(f'My nap is over! Removing all role members...')
         # remove role now so the logic doesn't double count everyone who joins the server
         for member in lobby_role.members:

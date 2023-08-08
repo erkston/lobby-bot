@@ -5,6 +5,7 @@
     "PersistentLobbyRole": "Server Lover",
     "LobbyThreshold": "14",
     "LobbyRestartThreshold": "8",
+    "LobbyCooldown": "1h",
     "Servers":[
       ["SERVER.IP", SERVERPORT]
     ],

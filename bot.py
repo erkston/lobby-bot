@@ -216,7 +216,7 @@ async def activate_lobby(lobby_message, targetindex):
         active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
-        # wait 5 minutes for people to connect
+        # wait 10 minutes for people to connect
         print(f'Sleeping 10 minutes to allow people to connect')
         await asyncio.sleep(600)
         print(f'My nap is over! Removing all role members...')

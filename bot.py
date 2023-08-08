@@ -231,7 +231,8 @@ async def activate_lobby(lobby_message, targetindex):
             await asyncio.sleep(60)
         if serverinfo[targetindex].player_count <= int(LobbyRestartThreshold):
             # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
-            print(f'Lobby active but we fell below the minimum player threshold, cleaning up and restarting lobby...')
+            print(f'We fell below the minimum player threshold ({serverinfo[targetindex].player_count}<={LobbyRestartThreshold})')
+            print(f'Cleaning up and restarting lobby...')
             await active_lobby_message.delete()
             LobbyActive = False
             for member in lobby_role.members:

@@ -248,7 +248,6 @@ async def activate_lobby(lobby_message, targetindex):
 
 
 # refreshes list of lobby members
-# why is this a separate function? i forget
 async def update_lobby_members():
     CurrentLobbyMembers.clear()
     for member in lobby_role.members:

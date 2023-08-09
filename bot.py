@@ -9,7 +9,7 @@ from discord.ext import tasks
 from datetime import timedelta
 
 # importing config and reading variables
-with open("config.json", "r") as jsonfile:
+with open("config/config.json", "r") as jsonfile:
     config = json.load(jsonfile)
 DiscordBotToken = config['DiscordBotToken']
 LobbyChannelName = config['LobbyChannelName']

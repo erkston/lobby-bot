@@ -280,14 +280,8 @@ async def activate_lobby(lobby_message, targetindex):
 async def update_lobby_members():
     CurrentLobbyMembers.clear()
     for member in lobby_role.members:
-        # member.nick may have some invalid characters that the bot doesn't like, if issues use member.name
-        # if a user doesn't have a defined nick we need to fall back and use member.name
-        if member.nick is None:
-            CurrentLobbyMembers.append(str(member.name))
-            print(f'Added {member.name} to list of lobby members (by member.name)')
-        else:
-            CurrentLobbyMembers.append(str(member.nick))
-            print(f'Added {member.nick} to list of lobby members (by member.nick)')
+        CurrentLobbyMembers.append(str(member.display_name))
+        print(f'Added {member.display_name} ({member.name}) to list of lobby members')
 
 
 # main function for catching user reactions

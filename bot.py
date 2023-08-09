@@ -236,11 +236,17 @@ async def activate_lobby(lobby_message, targetindex):
         print(f'Sleeping for {PingRemovalTimer} before removing ping message')
         await asyncio.sleep(PingRemovalTimerSeconds)
         print(f'PingRemovalTimer expired, removing ping message')
-        await active_lobby_message.edit(content='\n**SERVER IS FILLING UP, GET IN THERE!** \n\n lil-lobby-bot is napping, lobby will return later')
+        embed = discord.Embed(title='SERVER IS FILLING UP, GET IN THERE!',
+                              description='lil-lobby-bot is napping, lobby will return later',
+                              color=0x3b7030)
+        await active_lobby_message.edit(embed=embed, content='')
         print(f'Napping notification sent, sleeping until LobbyCooldown ({LobbyCooldown}) has passed since pings')
         await asyncio.sleep(NaptimeRemainingSeconds)
         print(f'My nap is over!')
-        await active_lobby_message.edit(content=f'\n\n I am awake! \n lobby will return when playercount gets below {LobbyRestartThreshold}')
+        embed = discord.Embed(title='I am awake!',
+                              description=f'lobby will return when playercount gets below {LobbyRestartThreshold}',
+                              color=0x3b7030)
+        await active_lobby_message.edit(embed=embed, content='')
         print(f'Edited message to let discord know I am awake')
         # remove role now so the logic doesn't double count everyone who joins the server
         print(f'Removing all role members...')

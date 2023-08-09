@@ -6,6 +6,7 @@
     "LobbyThreshold": "14",
     "LobbyRestartThreshold": "8",
     "LobbyCooldown": "1h",
+    "PingRemovalTimer": "15m",
     "Servers":[
       ["SERVER.IP", SERVERPORT]
     ],

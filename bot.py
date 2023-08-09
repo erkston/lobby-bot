@@ -18,6 +18,7 @@ PersistentLobbyRole = config['PersistentLobbyRole']
 LobbyThreshold = config['LobbyThreshold']
 LobbyRestartThreshold = config['LobbyRestartThreshold']
 LobbyCooldown = config['LobbyCooldown']
+PingRemovalTimer = config['PingRemovalTimer']
 Servers = config['Servers']
 ReactionEmojis = config['ReactionEmojis']
 ReactionIntervals = config['ReactionIntervals']
@@ -44,6 +45,8 @@ for interval in ReactionIntervals:
     ReactionIntervalsSeconds.append(convert_to_seconds(interval))
 
 LobbyCooldownSeconds = convert_to_seconds(LobbyCooldown)
+PingRemovalTimerSeconds = convert_to_seconds(PingRemovalTimer)
+NaptimeRemainingSeconds = LobbyCooldownSeconds-PingRemovalTimerSeconds
 
 # convert config emojis into a string for discord embed message (once)
 IntervalsString = ""
@@ -230,11 +233,17 @@ async def activate_lobby(lobby_message, targetindex):
         active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
-        # wait for people to connect
-        print(f'Sleeping for {LobbyCooldown} to prevent frequent pings')
-        await asyncio.sleep(LobbyCooldownSeconds)
-        print(f'My nap is over! Removing all role members...')
+        print(f'Sleeping for {PingRemovalTimer} before removing ping message')
+        await asyncio.sleep(PingRemovalTimerSeconds)
+        print(f'PingRemovalTimer expired, removing ping message')
+        await active_lobby_message.edit(content='\n**SERVER IS FILLING UP, GET IN THERE!** \n\n lil-lobby-bot is napping, lobby will return later')
+        print(f'Napping notification sent, sleeping until LobbyCooldown ({LobbyCooldown}) has passed since pings')
+        await asyncio.sleep(NaptimeRemainingSeconds)
+        print(f'My nap is over!')
+        await active_lobby_message.edit(content=f'\n\n I am awake! \n lobby will return when playercount gets below {LobbyRestartThreshold}')
+        print(f'Edited message to let discord know I am awake')
         # remove role now so the logic doesn't double count everyone who joins the server
+        print(f'Removing all role members...')
         for member in lobby_role.members:
             await member.remove_roles(lobby_role)
             print(f'Removed {member.name} from {lobby_role.name}')
@@ -242,9 +251,8 @@ async def activate_lobby(lobby_message, targetindex):
         # don't reactivate lobby until we fall below the restart threshold
         while serverinfo[targetindex].player_count > int(LobbyRestartThreshold):
             print(f'Lobby active and minimum threshold is met ({serverinfo[targetindex].player_count}>{LobbyRestartThreshold}), sleeping some more')
-            # update server info so it doesn't get stale
+            # main loop should keep server info up to date, it seems to crash sometimes though...
             await asyncio.sleep(60)
-            await update_servers()
         if serverinfo[targetindex].player_count <= int(LobbyRestartThreshold):
             # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
             print(f'We fell below the minimum player threshold ({serverinfo[targetindex].player_count}<={LobbyRestartThreshold})')

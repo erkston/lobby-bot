@@ -111,6 +111,16 @@ async def on_ready():
                 print(f'Persistent Role found: "{persistent_lobby_role.name}" (ID: {persistent_lobby_role.id})')
 
     print('------------------------------------------------------')
+    print('Checking for old lobby messages to delete...')
+    async for message in lobby_channel.history(limit=10):
+        if message.author == client.user:
+            print(f'Found old message from {client.user}, deleting it')
+            await message.delete()
+        else:
+            print(f'Found old message from {message.author}, leaving it alone')
+    print('Finished checking for old messages')
+    print('------------------------------------------------------')
+
 
     await initialize_lobby_message()
 
@@ -217,7 +227,7 @@ async def activate_lobby(lobby_message, targetindex):
         # no mentions allowed in embeds, so it has to be ugly :(
 
         ConnectString = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
-        active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
+        active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
         # wait for people to connect

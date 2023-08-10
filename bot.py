@@ -3,6 +3,8 @@ import a2s
 import asyncio
 import datetime
 from datetime import timezone
+from zoneinfo import ZoneInfo
+import tzdata
 import discord
 import json
 import re
@@ -25,6 +27,7 @@ ReactionEmojis = config['ReactionEmojis']
 ReactionIntervals = config['ReactionIntervals']
 
 # declaring other stuff
+BotTimezone = 'America/Los_Angeles'
 ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 serverinfo = []
@@ -42,7 +45,6 @@ def convert_to_seconds(s):
         for m in re.finditer(r'(?P<val>\d+(\.\d+)?)(?P<unit>[smhdw]?)', s, flags=re.I)
     }).total_seconds())
 
-# check if a message still exists
 
 for interval in ReactionIntervals:
     ReactionIntervalsSeconds.append(convert_to_seconds(interval))
@@ -90,6 +92,9 @@ client = DiscordBot(intents=intents)
 @client.event
 async def on_ready():
     print('------------------------------------------------------')
+    systemtime = datetime.datetime.now()
+    bottime = datetime.datetime.now(ZoneInfo(BotTimezone))
+    print(f'System Time: {systemtime.strftime("%Y-%m-%d %H:%M:%S")} Bot Time: {bottime.strftime("%Y-%m-%d %H:%M:%S")} (Timezone: {BotTimezone})')
     print('Config options:')
     print(f'LobbyChannelName: {LobbyChannelName}')
     print(f'LobbyRole: {LobbyRole}')
@@ -192,7 +197,7 @@ async def update_servers():
 # does NOT refresh server info as it would ping servers very frequently
 async def update_msg(lobby_message):
     if LobbyActive is True:
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(ZoneInfo(BotTimezone))
         print(f'Lobby is active, no need to update message ' + now.strftime("%Y-%m-%d %H:%M:%S"))
         return
     else:
@@ -234,7 +239,7 @@ async def update_msg(lobby_message):
             embed.timestamp = datetime.datetime.now()
             embed.set_footer(text='Last updated')
             await lobby_message.edit(embed=embed)
-            now = datetime.datetime.now()
+            now = datetime.datetime.now(ZoneInfo(BotTimezone))
             print(f'Lobby message updated ' + now.strftime("%Y-%m-%d %H:%M:%S"))
         else:
                 while UpdatingServerInfo:

@@ -8,6 +8,7 @@ The bot reads the number of current players on the servers and adds that to the 
 
 ![Example alert](https://i.imgur.com/ATHpA3z.png)
 
+It will send a discord ping to a specific role. The goal is to only send pings that people actively want by having them join the lobby specifically to be alerted.
 Made for TF2 but should work with anything compatible with python-a2s.
 ## Discord set-up
 The bot requires the following permissions: Manage Roles, Send Messages, Manage Messages, Embed Links, Add Reactions. It also requires the "Members" Privileged Gateway Intent, and permission to mention roles.

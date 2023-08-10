@@ -1,5 +1,5 @@
 FROM gorialis/discord.py:3.9-alpine-minimal
-
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 COPY requirements.txt ./

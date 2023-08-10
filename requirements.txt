@@ -1,2 +1,3 @@
 git+https://github.com/Pycord-Development/pycord
 python-a2s
+tzdata

@@ -67,7 +67,7 @@ class DiscordBot(discord.Client):
         if LobbyActive:
             await active_lobby_message.delete()
         else:
-            lobby_message = LOBBYMESSAGE
+            lobby_message = main_lobby_message
             await lobby_message.delete()
         print("Removing roles...")
         for member in lobby_role.members:
@@ -127,7 +127,7 @@ async def on_ready():
 
     await initialize_lobby_message()
 
-    await mainloop.start(LOBBYMESSAGE)
+    await mainloop.start(main_lobby_message)
 
 
 # force update server info and refresh discord message every minute
@@ -139,11 +139,11 @@ async def mainloop(lobby_message):
 
 async def initialize_lobby_message():
     embed = discord.Embed(title='Reticulating Splines...', color=0xfd8002)
-    global LOBBYMESSAGE
-    LOBBYMESSAGE = await lobby_channel.send(embed=embed)
+    global main_lobby_message
+    main_lobby_message = await lobby_channel.send(embed=embed)
     for emoji in ReactionEmojis:
-        await LOBBYMESSAGE.add_reaction(emoji)
-    print(f'Lobby message ID {LOBBYMESSAGE.id}')
+        await main_lobby_message.add_reaction(emoji)
+    print(f'Lobby message ID {main_lobby_message.id}')
 
 
 # function to update server, only runs in mainloop and activate_lobby (once per minute)
@@ -157,7 +157,7 @@ async def update_servers():
         serverinfo.append(a2s.info(tuple(Servers[i])))
         print(f'{serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
     now = datetime.datetime.now()
-    print(f'Finished updating server information...' + now.strftime("%Y-%m-%d %H:%M:%S"))
+    print(f'Finished updating server information... ' + now.strftime("%Y-%m-%d %H:%M:%S"))
     UpdatingServerInfo = False
 
 
@@ -166,11 +166,11 @@ async def update_servers():
 async def update_msg(lobby_message):
     if LobbyActive is True:
         now = datetime.datetime.now()
-        print(f'Lobby is active, no need to update message' + now.strftime("%Y-%m-%d %H:%M:%S"))
+        print(f'Lobby is active, no need to update message ' + now.strftime("%Y-%m-%d %H:%M:%S"))
         return
     else:
         # needed if the message has changed since first run
-        lobby_message = LOBBYMESSAGE
+        lobby_message = main_lobby_message
         # determine most full server to populate once the lobby is full
         targetindex = 0
         for i in range(len(serverinfo)):
@@ -271,7 +271,7 @@ async def activate_lobby(lobby_message, targetindex):
             for member in lobby_role.members:
                 await member.remove_roles(lobby_role)
             await initialize_lobby_message()
-            await update_msg(LOBBYMESSAGE)
+            await update_msg(main_lobby_message)
             return
     else:
         # if we are here that means the lobby threshold is met, but notifications have already been sent, do nothing
@@ -295,7 +295,7 @@ async def update_lobby_members():
 @client.event
 async def on_reaction_add(reaction, member):
     if not member.bot:
-        if reaction.message.id == LOBBYMESSAGE.id:
+        if reaction.message.id == main_lobby_message.id:
             for i in range(len(ReactionEmojis)):
                 if reaction.emoji == ReactionEmojis[i]:
                     # if user is already in lobby, remove this reaction but keep them in the lobby
@@ -306,12 +306,12 @@ async def on_reaction_add(reaction, member):
                         # wait 2 seconds for the reaction remove event to complete before putting member back in lobby
                         await asyncio.sleep(2)
                         await member.add_roles(lobby_role)
-                        await update_msg(LOBBYMESSAGE)
+                        await update_msg(main_lobby_message)
                     else:
                         # if member is not in lobby, put them there
                         await member.add_roles(lobby_role)
                         print(f'User {member.name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
-                        await update_msg(LOBBYMESSAGE)
+                        await update_msg(main_lobby_message)
                         await asyncio.sleep(ReactionIntervalsSeconds[i])
                         # after the selected time has passed, check if they are still in the lobby
                         await update_lobby_members()
@@ -333,12 +333,12 @@ async def on_reaction_add(reaction, member):
 # so this should be kept as simple as possible
 @client.event
 async def on_reaction_remove(reaction, member):
-    if reaction.message.id == LOBBYMESSAGE.id:
+    if reaction.message.id == main_lobby_message.id:
         for i in range(len(ReactionEmojis)):
             if reaction.emoji == ReactionEmojis[i]:
                 await member.remove_roles(lobby_role)
                 print(f'User {member.name} removed from "{lobby_role.name}"')
-                await update_msg(LOBBYMESSAGE)
+                await update_msg(main_lobby_message)
 
 
 client.run(DiscordBotToken)

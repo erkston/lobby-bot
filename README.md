@@ -22,5 +22,5 @@ The server should have a dedicated channel and role as well (see config below)
 - LobbyRestartThreshold - The bot will wait until the number of players on the server falls below this number to reset and start a new discord lobby
 - LobbyCooldown - Time that the bot will sleep for after sending discord pings. After this time is up it will start checking the server player count against LobbyRestartThreshold. Must have units attached (30m, 2h, 1d, etc) 
 - PingRemovalTimer - The bot will remove the message with the Role pings after this amount of time has passed. Must have units attached (10m, 30m, 1h, etc) 
-- Servers - List of servers to check, can be any number of servers as long as the syntax is preserved.
+- Servers - List of servers to check, can be any number of servers as long as the syntax is preserved. The bot will check current playercount for all servers in the list and select the one with the most players to direct lobby members to.
 - ReactionEmojis and ReactionIntervals - These are used for the reactions on the lobby message that users will click to join the lobby. There can be any number of each, so long as each emoji has a corresponding time interval. From top to bottom in the config they will appear in discord left to right. Time intervals must have units attached (30s, 45m, 5h, etc) 

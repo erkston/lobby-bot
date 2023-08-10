@@ -90,8 +90,20 @@ client = DiscordBot(intents=intents)
 @client.event
 async def on_ready():
     print('------------------------------------------------------')
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
+    print('Config options:')
+    print(f'LobbyChannelName: {LobbyChannelName}')
+    print(f'LobbyRole: {LobbyRole}')
+    print(f'PersistentLobbyRole: {PersistentLobbyRole}')
+    print(f'LobbyThreshold: {LobbyThreshold}')
+    print(f'LobbyRestartThreshold: {LobbyRestartThreshold}')
+    print(f'LobbyCooldown: {LobbyCooldown}')
+    print(f'PingRemovalTimer: {PingRemovalTimer}')
+    for i in range(len(Servers)):
+        print(f'Servers[{i}]: {Servers[i]}')
+    for i in range(len(ReactionEmojis)):
+        print(f'ReactionEmojis[{i}]: {ReactionEmojis[i]} for interval {ReactionIntervals[i]}')
     print('------------------------------------------------------')
+    print(f'Logged in as {client.user} (ID: {client.user.id})')
     print(f'{client.user} is connected to the following guild(s):')
     for guild in client.guilds:
         print(f'{guild.name} (id: {guild.id})')
@@ -141,6 +153,7 @@ async def mainloop(lobby_message):
 
 
 async def initialize_lobby_message():
+    print('Initializing lobby message')
     embed = discord.Embed(title='Reticulating Splines...', color=0xfd8002)
     global main_lobby_message
     main_lobby_message = await lobby_channel.send(embed=embed)

@@ -322,6 +322,11 @@ async def on_reaction_add(reaction, member):
                         reacted_message_id = main_lobby_message.id
                         await member.add_roles(lobby_role)
                         print(f'User {member.name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
+                        # if the lobby is started from someone's reaction, the below update_msg will be awaited until
+                        # the bot resets completely (LobbyRestartThreshold), at which point the timer will start.
+                        # shouldn't cause an issue with roles because of the reacted_message_id check but
+                        # may cause confusing console output. this only applies for the user who puts the lobby
+                        # over the threshold, all other timers should work fine
                         await update_msg(main_lobby_message)
                         await asyncio.sleep(ReactionIntervalsSeconds[i])
                         print(f'Timer expired for {member.name} for "{lobby_role.name}" after {ReactionIntervals[i]}!')

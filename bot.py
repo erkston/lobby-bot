@@ -2,6 +2,7 @@
 import a2s
 import asyncio
 import datetime
+from datetime import timezone
 import discord
 import json
 import re
@@ -162,11 +163,13 @@ async def update_servers():
     UpdatingServerInfo = True
     print(f'Updating server information...')
     global serverinfo
+    global server_update_utc_ts
     serverinfo.clear()
     for i in range(len(Servers)):
         serverinfo.append(a2s.info(tuple(Servers[i])))
         print(f'{serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
-    now = datetime.datetime.now()
+    utc = datetime.datetime.now(timezone.utc)
+    server_update_utc_ts = utc.timestamp()
     print(f'Finished updating server information')
     UpdatingServerInfo = False
 
@@ -267,11 +270,21 @@ async def activate_lobby(lobby_message, targetindex):
             await member.remove_roles(lobby_role)
             print(f'Removed {member.name} from {lobby_role.name}')
         await update_servers()
+
         # don't reactivate lobby until we fall below the restart threshold
         while serverinfo[targetindex].player_count > int(LobbyRestartThreshold):
             print(f'Lobby active and minimum threshold is met ({serverinfo[targetindex].player_count}>{LobbyRestartThreshold}), sleeping some more')
-            # main loop should keep server info up to date, it seems to crash sometimes though...
             await asyncio.sleep(60)
+            # if lobby is launched in main loop (and not on_reaction_add) it will stop the main loop from updating server info
+            # we need to update server info if it's stale (older than 100s), after lobby resets we will return to main loop
+            utc = datetime.datetime.now(timezone.utc)
+            utc_timestamp = utc.timestamp()
+            if utc_timestamp - server_update_utc_ts > 100:
+                print(f'Server info is stale! Updating it myself...')
+                await update_servers()
+            else:
+                print(f'Server info is not stale :)')
+
         if serverinfo[targetindex].player_count <= int(LobbyRestartThreshold):
             # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
             print(f'We fell below the minimum player threshold ({serverinfo[targetindex].player_count}<={LobbyRestartThreshold})')

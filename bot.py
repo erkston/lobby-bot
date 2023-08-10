@@ -148,9 +148,9 @@ async def initialize_lobby_message():
     print(f'Lobby message ID {main_lobby_message.id}')
 
 
-async def is_message_deleted(ctx, message_id):
+async def is_message_deleted(channel, message_id):
     try:
-        await ctx.fetch_message(message_id)
+        await channel.fetch_message(message_id)
         return False
     except discord.errors.NotFound:
         # if a NotFound error appears, the message is either not in this channel or deleted
@@ -240,8 +240,7 @@ async def activate_lobby(lobby_message, targetindex):
         LobbyActive = True
         # delete old lobby message and send a new message (can't notify role members in edits)
         await lobby_message.delete()
-        now = datetime.datetime.now()
-        print(f'Old lobby message deleted ' + now.strftime("%Y-%m-%d %H:%M:%S"))
+        print(f'Old lobby message deleted')
         # new message with role mention to notify lobby members
         # no mentions allowed in embeds, so it has to be ugly :(
 
@@ -260,7 +259,7 @@ async def activate_lobby(lobby_message, targetindex):
         await asyncio.sleep(NaptimeRemainingSeconds)
         print(f'My nap is over!')
         embed = discord.Embed(title='I am awake!',
-                              description=f'Lobby will return when the server player count gets below {LobbyRestartThreshold}',
+                              description=f'Lobby will return when less than {LobbyRestartThreshold} players are online',
                               color=0x3b7030)
         await active_lobby_message.edit(embed=embed, content='')
         print(f'Edited message to let discord know I am awake')

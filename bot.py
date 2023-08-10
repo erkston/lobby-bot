@@ -29,6 +29,7 @@ ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 serverinfo = []
 CurrentLobbyMembers = []
+CurrentLobbyMemberIDs = []
 LobbyActive = False
 UpdatingServerInfo = False
 allowed_mentions = discord.AllowedMentions(roles=True)
@@ -267,7 +268,7 @@ async def activate_lobby(lobby_message, targetindex):
         print(f'Removing all role members...')
         for member in lobby_role.members:
             await member.remove_roles(lobby_role)
-            print(f'Removed {member.name} from {lobby_role.name}')
+            print(f'Removed {member.display_name} from {lobby_role.name}')
         await update_servers()
 
         # don't reactivate lobby until we fall below the restart threshold
@@ -304,8 +305,10 @@ async def activate_lobby(lobby_message, targetindex):
 # refreshes list of lobby members
 async def update_lobby_members():
     CurrentLobbyMembers.clear()
+    CurrentLobbyMemberIDs.clear()
     for member in lobby_role.members:
         CurrentLobbyMembers.append(str(member.display_name))
+        CurrentLobbyMemberIDs.append(member.id)
     if not CurrentLobbyMembers:
         print(f'Lobby is currently empty :(')
     else:
@@ -324,7 +327,7 @@ async def on_reaction_add(reaction, member):
                     # since this removes the reaction it will remove the role as well, so we need to give it back to them
                     if any(role.id == lobby_role.id for role in member.roles):
                         await reaction.remove(member)
-                        print(f'User {member.name} already has role "{lobby_role.name}"')
+                        print(f'User {member.display_name} already has role "{lobby_role.name}"')
                         # wait 2 seconds for the reaction remove event to complete before putting member back in lobby
                         await asyncio.sleep(2)
                         await member.add_roles(lobby_role)
@@ -333,7 +336,7 @@ async def on_reaction_add(reaction, member):
                         # if member is not in lobby, put them there
                         reacted_message_id = main_lobby_message.id
                         await member.add_roles(lobby_role)
-                        print(f'User {member.name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
+                        print(f'User {member.display_name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
                         # if the lobby is started from someone's reaction, the below update_msg will be awaited until
                         # the bot resets completely (LobbyRestartThreshold), at which point the timer will start.
                         # shouldn't cause an issue with roles because of the reacted_message_id check but
@@ -341,22 +344,22 @@ async def on_reaction_add(reaction, member):
                         # over the threshold, all other timers should work fine
                         await update_msg(main_lobby_message)
                         await asyncio.sleep(ReactionIntervalsSeconds[i])
-                        print(f'Timer expired for {member.name} for "{lobby_role.name}" after {ReactionIntervals[i]}!')
+                        print(f'Timer expired for {member.display_name} for "{lobby_role.name}" after {ReactionIntervals[i]}!')
                         # after the selected time has passed, check if the message still exists
                         reacted_message_deleted = await is_message_deleted(lobby_channel, reacted_message_id)
                         if reacted_message_deleted:
-                            print(f'{member.name} reacted to message {reacted_message_id} but it no longer exists, doing nothing')
+                            print(f'{member.display_name} reacted to message {reacted_message_id} but it no longer exists, doing nothing')
                             pass
                         else:
                             # the message still exists, lets check if they're still in the lobby
                             await update_lobby_members()
-                            if any(lobbymember == member.name for lobbymember in CurrentLobbyMembers):
+                            if any(lobbymemberid == member.id for lobbymemberid in CurrentLobbyMemberIDs):
                                 # if they're still there, AND if the original message they reacted to still exists, remove them
-                                print(f'{member.name} reacted to message {reacted_message_id} which still exists, removing them')
+                                print(f'{member.display_name} reacted to message {reacted_message_id} which still exists, removing them')
                                 await reaction.remove(member)
                             else:
                                 # if they're not, do nothing (may have removed themselves before the timer was up)
-                                print(f'{ReactionIntervals[i]} timer expired for {member.name} but they were previously removed from {lobby_role.name}')
+                                print(f'{ReactionIntervals[i]} timer expired for {member.display_name} but they were previously removed from {lobby_role.name}')
         else:
             pass
 
@@ -370,7 +373,7 @@ async def on_reaction_remove(reaction, member):
         for i in range(len(ReactionEmojis)):
             if reaction.emoji == ReactionEmojis[i]:
                 await member.remove_roles(lobby_role)
-                print(f'User {member.name} removed from "{lobby_role.name}"')
+                print(f'User {member.display_name} removed from "{lobby_role.name}"')
                 await update_msg(main_lobby_message)
 
 

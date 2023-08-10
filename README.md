@@ -15,6 +15,7 @@ The bot requires the following permissions: Manage Roles, Send Messages, Manage 
 The server should have a dedicated channel and role as well (see config below)
 ## Configuration
 - DiscordBotToken - Your bots token from the Discord Developer Portal
+- BotTimezone - Timezone used for timestamps in console output. Will use this timezone instead of system time
 - LobbyChannelName - The Channel name the bot should use to send messages
 - LobbyRole - The Role name the bot should use to alert people once the lobby is full. This should be a role dedicated for bot use, all members are removed from the role after pings are sent.
 - PersistentLobbyRole - A separate Role that will always be pinged when the lobby is full. Role members are not removed automatically (as they are for LobbyRole) so members of this role will  always be notified when a lobby fills without having to enter the lobby themselves. Members of this role are not considered in the math that determines when the lobby is full.

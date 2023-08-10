@@ -15,6 +15,7 @@ from datetime import timedelta
 with open("config/config.json", "r") as jsonfile:
     config = json.load(jsonfile)
 DiscordBotToken = config['DiscordBotToken']
+BotTimezone = config['BotTimezone']
 LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
 PersistentLobbyRole = config['PersistentLobbyRole']
@@ -27,7 +28,6 @@ ReactionEmojis = config['ReactionEmojis']
 ReactionIntervals = config['ReactionIntervals']
 
 # declaring other stuff
-BotTimezone = 'America/Los_Angeles'
 ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 serverinfo = []

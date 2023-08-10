@@ -1,5 +1,6 @@
 {
     "DiscordBotToken": "YOUR_BOT_TOKEN",
+    "BotTimezone": "America/New_York",
     "LobbyChannelName": "lobby-bot",
     "LobbyRole": "Server Lobby",
     "PersistentLobbyRole": "Server Lover",

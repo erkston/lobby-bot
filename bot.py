@@ -285,7 +285,7 @@ async def update_lobby_members():
     for member in lobby_role.members:
         CurrentLobbyMembers.append(str(member.display_name))
     if not CurrentLobbyMembers:
-        print(f'Lobby is currently empty')
+        print(f'Lobby is currently empty :(')
     else:
         print(f'Current lobby members are:')
         print(" ".join(CurrentLobbyMembers))

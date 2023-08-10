@@ -156,6 +156,7 @@ async def update_servers():
     for i in range(len(Servers)):
         serverinfo.append(a2s.info(tuple(Servers[i])))
         print(f'{serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
+    print(f'Finished updating server information...' + now.strftime("%Y-%m-%d %H:%M:%S"))
     UpdatingServerInfo = False
 
 
@@ -163,7 +164,7 @@ async def update_servers():
 # does NOT refresh server info as it would ping servers very frequently
 async def update_msg(lobby_message):
     if LobbyActive is True:
-        print(f'Lobby is active, no need to update message')
+        print(f'Lobby is active, no need to update message' + now.strftime("%Y-%m-%d %H:%M:%S"))
         return
     else:
         # needed if the message has changed since first run
@@ -281,7 +282,7 @@ async def update_lobby_members():
     CurrentLobbyMembers.clear()
     for member in lobby_role.members:
         CurrentLobbyMembers.append(str(member.display_name))
-        print(f'Added {member.display_name} ({member.name}) to list of lobby members')
+    print(f'Current lobby members are: {join(CurrentLobbyMembers)}')
 
 
 # main function for catching user reactions

@@ -257,7 +257,7 @@ async def activate_lobby(lobby_message, targetindex):
         await active_lobby_message.edit(embed=embed, content='')
         print(f'Napping notification sent, sleeping until LobbyCooldown ({LobbyCooldown}) has passed since pings')
         await asyncio.sleep(NaptimeRemainingSeconds)
-        print(f'My nap is over!')
+        print(f'My nap is over! LobbyCooldown ({LobbyCooldown}) has passed since pings were sent')
         embed = discord.Embed(title='I am awake!',
                               description=f'Lobby will return when less than {LobbyRestartThreshold} players are online',
                               color=0x3b7030)

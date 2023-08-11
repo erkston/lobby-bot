@@ -19,6 +19,8 @@ The server should have a dedicated channel and role as well (see config below)
 - LobbyChannelName - The Channel name the bot should use to send messages
 - LobbyRole - The Role name the bot should use to alert people once the lobby is full. This should be a role dedicated for bot use, all members are removed from the role after pings are sent.
 - PersistentLobbyRole - A separate Role that will always be pinged when the lobby is full. Role members are not removed automatically (as they are for LobbyRole) so members of this role will  always be notified when a lobby fills without having to enter the lobby themselves. Members of this role are not considered in the math that determines when the lobby is full.
+- LobbyMessageTitle - Title of the discord message showing the lobby information
+- LobbyMessageColor and NappingMessageColor - Hex values used for the discord embed messages.
 - LobbyThreshold - The number of players the bot should wait for before sending discord pings. This is total players including any already on the server
 - LobbyRestartThreshold - The bot will wait until the number of players on the server falls below this number to reset and start a new discord lobby
 - LobbyCooldown - Time that the bot will sleep for after sending discord pings. After this time is up it will start checking the server player count against LobbyRestartThreshold. Must have units attached (30m, 2h, 1d, etc) 

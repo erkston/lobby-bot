@@ -4,6 +4,7 @@
     "LobbyChannelName": "lobby-bot",
     "LobbyRole": "Server Lobby",
     "PersistentLobbyRole": "Server Lover",
+    "LobbyMessageTitle": "My Lobby",
     "LobbyThreshold": "14",
     "LobbyRestartThreshold": "8",
     "LobbyCooldown": "1h",

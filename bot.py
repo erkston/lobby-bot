@@ -19,6 +19,7 @@ BotTimezone = config['BotTimezone']
 LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
 PersistentLobbyRole = config['PersistentLobbyRole']
+LobbyMessageTitle = config['LobbyMessageTitle']
 LobbyThreshold = config['LobbyThreshold']
 LobbyRestartThreshold = config['LobbyRestartThreshold']
 LobbyCooldown = config['LobbyCooldown']
@@ -99,6 +100,7 @@ async def on_ready():
     print(f'LobbyChannelName: {LobbyChannelName}')
     print(f'LobbyRole: {LobbyRole}')
     print(f'PersistentLobbyRole: {PersistentLobbyRole}')
+    print(f'LobbyMessageTitle: {LobbyMessageTitle}')
     print(f'LobbyThreshold: {LobbyThreshold}')
     print(f'LobbyRestartThreshold: {LobbyRestartThreshold}')
     print(f'LobbyCooldown: {LobbyCooldown}')
@@ -159,7 +161,7 @@ async def mainloop(lobby_message):
 
 async def initialize_lobby_message():
     print('Initializing lobby message')
-    embed = discord.Embed(title='Reticulating Splines...', color=0xfd8002)
+    embed = discord.Embed(title='Reticulating Splines...', color=0xb4aba0)
     global main_lobby_message
     main_lobby_message = await lobby_channel.send(embed=embed)
     for emoji in ReactionEmojis:
@@ -226,11 +228,11 @@ async def update_msg(lobby_message):
         # if the threshold is not met AND lobby is not already active, display lobby info in embed
         if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and LobbyActive is False:
             print(f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}), displaying lobby information')
-            embed = discord.Embed(title='🇺🇸 Atlanta Regulars Lobby',
-                                  description='Pings will be sent once ' + LobbyThreshold + ' players are ready. \nCurrently ' + str(
+            embed = discord.Embed(title=f'{LobbyMessageTitle}',
+                                  description='Pings will be sent once ' + LobbyThreshold + ' players are ready \nCurrently ' + str(
                                       CurrentServerPlayers) + ' player(s) in-game and ' + str(
                                       DiscordersRequired) + ' more needed here!',
-                                  color=0xfd8002)
+                                  color=0x757544)
             embed.add_field(name='Players in lobby (' + str(CurrentLobbySize) + "/" + str(
                                       DiscordersRequired) + '):', value=LobbyMembersString,
                             inline=False)
@@ -271,15 +273,15 @@ async def activate_lobby(lobby_message, targetindex):
         await asyncio.sleep(PingRemovalTimerSeconds)
         print(f'PingRemovalTimer expired, removing ping message')
         embed = discord.Embed(title='SERVER IS FILLING UP, GET IN THERE!',
-                              description='lil-lobby-bot is napping, lobby will return later',
-                              color=0x8c8f52)
+                              description=f'{client.user.display_name} is napping, lobby will return later',
+                              color=0x757544)
         await active_lobby_message.edit(embed=embed, content='')
         print(f'Napping notification sent, sleeping until LobbyCooldown ({LobbyCooldown}) has passed since pings')
         await asyncio.sleep(NaptimeRemainingSeconds)
         print(f'My nap is over! LobbyCooldown ({LobbyCooldown}) has passed since pings were sent')
         embed = discord.Embed(title='I am awake!',
                               description=f'Lobby will return when less than {LobbyRestartThreshold} players are online',
-                              color=0x8c8f52)
+                              color=0x757544)
         await active_lobby_message.edit(embed=embed, content='')
         print(f'Edited message to let discord know I am awake')
         # remove role now so the logic doesn't double count everyone who joins the server

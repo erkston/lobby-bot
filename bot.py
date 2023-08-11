@@ -227,7 +227,7 @@ async def update_msg(lobby_message):
         if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and LobbyActive is False:
             print(f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}), displaying lobby information')
             embed = discord.Embed(title='🇺🇸 Atlanta Regulars Lobby',
-                                  description='Pings will be sent once ' + LobbyThreshold + ' players are ready. \n Currently ' + str(
+                                  description='Pings will be sent once ' + LobbyThreshold + ' players are ready. \nCurrently ' + str(
                                       CurrentServerPlayers) + ' player(s) in-game and ' + str(
                                       DiscordersRequired) + ' more needed here!',
                                   color=0xfd8002)
@@ -272,14 +272,14 @@ async def activate_lobby(lobby_message, targetindex):
         print(f'PingRemovalTimer expired, removing ping message')
         embed = discord.Embed(title='SERVER IS FILLING UP, GET IN THERE!',
                               description='lil-lobby-bot is napping, lobby will return later',
-                              color=0x3b7030)
+                              color=0x8c8f52)
         await active_lobby_message.edit(embed=embed, content='')
         print(f'Napping notification sent, sleeping until LobbyCooldown ({LobbyCooldown}) has passed since pings')
         await asyncio.sleep(NaptimeRemainingSeconds)
         print(f'My nap is over! LobbyCooldown ({LobbyCooldown}) has passed since pings were sent')
         embed = discord.Embed(title='I am awake!',
                               description=f'Lobby will return when less than {LobbyRestartThreshold} players are online',
-                              color=0x3b7030)
+                              color=0x8c8f52)
         await active_lobby_message.edit(embed=embed, content='')
         print(f'Edited message to let discord know I am awake')
         # remove role now so the logic doesn't double count everyone who joins the server
@@ -294,11 +294,11 @@ async def activate_lobby(lobby_message, targetindex):
             print(f'Lobby active and minimum threshold is met ({serverinfo[targetindex].player_count}>{LobbyRestartThreshold}), sleeping some more')
             await asyncio.sleep(60)
             # if lobby is launched in main loop (and not on_reaction_add) it will stop the main loop from updating server info
-            # we need to update server info if it's stale (older than 100s), after lobby resets we will return to main loop
+            # we need to update server info if it's stale (older than 60s), after lobby resets we will return to main loop
             utc = datetime.datetime.now(timezone.utc)
             utc_timestamp = utc.timestamp()
-            if utc_timestamp - server_update_utc_ts > 100:
-                print(f'Server info is stale! Updating it myself...')
+            if utc_timestamp - server_update_utc_ts > 60:
+                print(f'Server info is stale! I need to update it...')
                 await update_servers()
             else:
                 print(f'Server info is not stale :)')

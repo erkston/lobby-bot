@@ -7,9 +7,9 @@ from datetime import timezone
 from zoneinfo import ZoneInfo
 import tzdata
 import discord
+from discord.ext import tasks
 import json
 import re
-from discord.ext import tasks
 from datetime import timedelta
 
 # importing config and reading variables
@@ -18,6 +18,7 @@ with open("config/config.json", "r") as jsonfile:
 DiscordBotToken = config['DiscordBotToken']
 BotTimezone = config['BotTimezone']
 BotGame = config['BotGame']
+BotAdminRole = config['BotAdminRole']
 LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
 PersistentLobbyRole = config['PersistentLobbyRole']
@@ -42,6 +43,8 @@ CurrentLobbyMemberIDs = []
 LobbyActive = False
 UpdatingServerInfo = False
 allowed_mentions = discord.AllowedMentions(roles=True)
+lbsetCommandList = ["BotGame", "PersistentLobbyRoleEnable", "LobbyMessageTitle", "LobbyMessageColor", "NappingMessageColor",
+                    "LobbyThreshold", "LobbyRestartThreshold", "LobbyCooldown", "PingRemovalTimer"]
 
 
 # convert config time intervals into seconds (once) for use in asyncio.sleep
@@ -57,23 +60,19 @@ for interval in ReactionIntervals:
 
 LobbyCooldownSeconds = convert_to_seconds(LobbyCooldown)
 PingRemovalTimerSeconds = convert_to_seconds(PingRemovalTimer)
-NaptimeRemainingSeconds = LobbyCooldownSeconds-PingRemovalTimerSeconds
+NaptimeRemainingSeconds = LobbyCooldownSeconds - PingRemovalTimerSeconds
 
 # convert config emojis into a string for discord embed message (once)
 IntervalsString = ""
 for i in range(len(ReactionEmojis)):
     IntervalsString += "".join([ReactionEmojis[i], " for ", ReactionIntervals[i], "ㅤ"])
 
-# need members intent for detecting removal of reactions
-intents = discord.Intents.default()
-intents.members = True
-
 
 # cleanup functions to delete any messages and remove all users from lobby roles
-class DiscordBot(discord.Client):
+class Bot(discord.Bot):
     async def cleanup(self):
         print('------------------------------------------------------')
-        print(f'Shutting down {client.user}...')
+        print(f'Shutting down {bot.user}...')
         print("Cleaning up messages...")
         if LobbyActive:
             await active_lobby_message.delete()
@@ -84,29 +83,112 @@ class DiscordBot(discord.Client):
         for member in lobby_role.members:
             await member.remove_roles(lobby_role)
 
-
     async def close(self):
         await self.cleanup()
         print("Goodbye...")
         await super().close()
 
 
-client = DiscordBot(intents=intents)
+# need members intent for detecting removal of reactions
+intents = discord.Intents.default()
+intents.members = True
+bot = Bot(intents=intents)
+
+
+@bot.command(name="lbset", description="Change setting values")
+async def lbset(ctx, setting: discord.Option(autocomplete=discord.utils.basic_autocomplete(lbsetCommandList)), value):
+    if bot_admin_role in ctx.author.roles:
+        print(f'Received command from {ctx.author.display_name}, executing command...')
+        global LobbyCooldown
+        global LobbyCooldownSeconds
+        global PingRemovalTimer
+        global PingRemovalTimerSeconds
+        global NaptimeRemainingSeconds
+        if setting.casefold() == "botgame":
+            global BotGame
+            BotGame = value
+            await ctx.respond(f'BotGame has been set to "{BotGame}"')
+            print(f'BotGame changed to {BotGame} by {ctx.author.display_name}')
+            if LobbyActive:
+                await bot.change_presence(status=discord.Status.idle, activity=discord.Game(f"{BotGame}"))
+                print(f'Updated discord presence to playing {BotGame}')
+
+        elif setting.casefold() == "persistentlobbyroleenable":
+            global PersistentLobbyRoleEnable
+            PersistentLobbyRoleEnable = value
+            await ctx.respond(f'PersistentLobbyRoleEnable has been set to "{PersistentLobbyRoleEnable}"')
+            print(f'PersistentLobbyRoleEnable changed to {PersistentLobbyRoleEnable} by {ctx.author.display_name}')
+
+        elif setting.casefold() == "lobbymessagetitle":
+            global LobbyMessageTitle
+            LobbyMessageTitle = value
+            await ctx.respond(f'LobbyMessageTitle has been set to "{LobbyMessageTitle}"')
+            print(f'LobbyMessageTitle changed to {LobbyMessageTitle} by {ctx.author.display_name}')
+            await update_msg(main_lobby_message)
+
+        elif setting.casefold() == "lobbymessagecolor":
+            global LobbyMessageColor
+            LobbyMessageColor = value
+            await ctx.respond(f'LobbyMessageColor has been set to "{LobbyMessageColor}"')
+            print(f'LobbyMessageColor changed to {LobbyMessageColor} by {ctx.author.display_name}')
+            await update_msg(main_lobby_message)
+
+        elif setting.casefold() == "nappingmessagecolor":
+            global NappingMessageColor
+            NappingMessageColor = value
+            await ctx.respond(f'NappingMessageColor has been set to "{NappingMessageColor}"')
+            print(f'NappingMessageColor changed to {NappingMessageColor} by {ctx.author.display_name}')
+
+        elif setting.casefold() == "lobbythreshold":
+            global LobbyThreshold
+            LobbyThreshold = value
+            await ctx.respond(f'LobbyThreshold has been set to {LobbyThreshold}')
+            print(f'LobbyThreshold changed to {LobbyThreshold} by {ctx.author.display_name}')
+            await update_msg(main_lobby_message)
+
+        elif setting.casefold() == "lobbyrestartthreshold":
+            global LobbyRestartThreshold
+            LobbyRestartThreshold = value
+            await ctx.respond(f'LobbyRestartThreshold has been set to {LobbyRestartThreshold}')
+            print(f'LobbyRestartThreshold changed to {LobbyRestartThreshold} by {ctx.author.display_name}')
+            await update_msg(main_lobby_message)
+
+        elif setting.casefold() == "lobbycooldown":
+            LobbyCooldown = value
+            LobbyCooldownSeconds = convert_to_seconds(LobbyCooldown)
+            NaptimeRemainingSeconds = LobbyCooldownSeconds - PingRemovalTimerSeconds
+            await ctx.respond(f'LobbyCooldown has been set to {LobbyCooldown}')
+            print(f'LobbyCooldown changed to {LobbyCooldown} ({LobbyCooldownSeconds}s) by {ctx.author.display_name}')
+
+        elif setting.casefold() == "pingremovaltimer":
+            PingRemovalTimer = value
+            PingRemovalTimerSeconds = convert_to_seconds(PingRemovalTimer)
+            NaptimeRemainingSeconds = LobbyCooldownSeconds - PingRemovalTimerSeconds
+            await ctx.respond(f'PingRemovalTimer has been set to {PingRemovalTimer}')
+            print(f'PingRemovalTimer changed to {PingRemovalTimer} ({PingRemovalTimerSeconds}s) by {ctx.author.display_name}')
+        else:
+            await ctx.respond("I don't have that setting, please try again")
+            print(f'Received command from {ctx.author.display_name} but I did not understand it :(')
+    else:
+        await ctx.respond('You do not have appropriate permissions! Leave me alone!!')
+        print(f'Received command from {ctx.author.display_name} who does not have admin role "{bot_admin_role}"!')
 
 
 # run once at bot start
-@client.event
+@bot.event
 async def on_ready():
     print('------------------------------------------------------')
     systemtime = datetime.datetime.now()
     bottime = datetime.datetime.now(ZoneInfo(BotTimezone))
-    print(f'System Time: {systemtime.strftime("%Y-%m-%d %H:%M:%S")} Bot Time: {bottime.strftime("%Y-%m-%d %H:%M:%S")} (Timezone: {BotTimezone})')
+    print(
+        f'System Time: {systemtime.strftime("%Y-%m-%d %H:%M:%S")} Bot Time: {bottime.strftime("%Y-%m-%d %H:%M:%S")} (Timezone: {BotTimezone})')
     print('Config options:')
     print(f'LobbyChannelName: {LobbyChannelName}')
     print(f'LobbyRole: {LobbyRole}')
     print(f'PersistentLobbyRole: {PersistentLobbyRole}')
     print(f'PersistentLobbyRoleEnable: {PersistentLobbyRoleEnable}')
     print(f'BotGame: {BotGame}')
+    print(f'BotAdminRole: {BotAdminRole}')
     print(f'LobbyMessageTitle: {LobbyMessageTitle}')
     print(f'LobbyMessageColor: {LobbyMessageColor}')
     print(f'NappingMessageColor: {NappingMessageColor}')
@@ -119,23 +201,24 @@ async def on_ready():
     for i in range(len(ReactionEmojis)):
         print(f'ReactionEmojis[{i}]: {ReactionEmojis[i]} for interval {ReactionIntervals[i]}')
     print('------------------------------------------------------')
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
-    print(f'{client.user} is connected to the following guild(s):')
-    for guild in client.guilds:
+    print(f'Logged in as {bot.user} (ID: {bot.user.id})')
+    print(f'{bot.user} is connected to the following guild(s):')
+    for guild in bot.guilds:
         print(f'{guild.name} (id: {guild.id})')
 
     # iterate through channels to find the one that matches the name in the config
     global lobby_channel
-    for guild in client.guilds:
+    for guild in bot.guilds:
         for channel in guild.channels:
             if channel.name == LobbyChannelName:
                 lobby_channel = channel
                 print(f'Channel found: #{lobby_channel.name} (ID: {lobby_channel.id})')
 
-    # iterate through roles to find the one that matches the name in the config
+    # iterate through roles to find the one that matches the names in the config
     global lobby_role
     global persistent_lobby_role
-    for guild in client.guilds:
+    global bot_admin_role
+    for guild in bot.guilds:
         for role in guild.roles:
             if role.name == LobbyRole:
                 lobby_role = role
@@ -143,12 +226,15 @@ async def on_ready():
             if role.name == PersistentLobbyRole:
                 persistent_lobby_role = role
                 print(f'Persistent Role found: "{persistent_lobby_role.name}" (ID: {persistent_lobby_role.id})')
+            if role.name == BotAdminRole:
+                bot_admin_role = role
+                print(f'Bot Admin Role found: "{bot_admin_role.name}" (ID: {bot_admin_role.id})')
 
     print('------------------------------------------------------')
     print('Checking for old lobby messages to delete...')
-    async for message in lobby_channel.history(limit=10):
-        if message.author == client.user:
-            print(f'Found old message from {client.user}, deleting it')
+    async for message in lobby_channel.history(limit=20):
+        if message.author == bot.user:
+            print(f'Found old message from {bot.user}, deleting it')
             await message.delete()
         else:
             print(f'Found old message from {message.author}, leaving it alone')
@@ -175,9 +261,9 @@ async def initialize_lobby_message():
     for emoji in ReactionEmojis:
         await main_lobby_message.add_reaction(emoji)
     print(f'Lobby message ID {main_lobby_message.id}')
-    await client.change_presence(status=discord.Status.online,
-                                 activity=discord.Activity(type=discord.ActivityType.listening,
-                                                           name=f"#{lobby_channel}"))
+    await bot.change_presence(status=discord.Status.online,
+                              activity=discord.Activity(type=discord.ActivityType.listening,
+                                                        name=f"#{lobby_channel}"))
     print('Updated discord status')
 
 
@@ -239,14 +325,15 @@ async def update_msg(lobby_message):
             LobbyMembersString = "None"
         # if the threshold is not met AND lobby is not already active, display lobby info in embed
         if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and LobbyActive is False:
-            print(f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}), displaying lobby information')
+            print(
+                f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}), displaying lobby information')
             embed = discord.Embed(title=f'{LobbyMessageTitle}',
                                   description='Pings will be sent once ' + LobbyThreshold + ' players are ready \nCurrently ' + str(
                                       CurrentServerPlayers) + ' player(s) in-game and ' + str(
                                       DiscordersRequired) + ' more needed here!',
                                   color=int(LobbyMessageColor, 16))
             embed.add_field(name='Players in lobby (' + str(CurrentLobbySize) + "/" + str(
-                                      DiscordersRequired) + '):', value=LobbyMembersString,
+                DiscordersRequired) + '):', value=LobbyMembersString,
                             inline=False)
             embed.add_field(name='\u200b', value='\u200b', inline=False)
             embed.add_field(name='React below to join!', value=IntervalsString, inline=False)
@@ -256,11 +343,11 @@ async def update_msg(lobby_message):
             now = datetime.datetime.now(ZoneInfo(BotTimezone))
             print(f'Lobby message updated ' + now.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-                while UpdatingServerInfo:
-                    print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')
-                    await asyncio.sleep(3)
-                print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
-                await activate_lobby(lobby_message, targetindex)
+            while UpdatingServerInfo:
+                print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')
+                await asyncio.sleep(3)
+            print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
+            await activate_lobby(lobby_message, targetindex)
         return
 
 
@@ -277,20 +364,24 @@ async def activate_lobby(lobby_message, targetindex):
         # new message with role mention to notify lobby members
         # no mentions allowed in embeds, so it has to be ugly :(
 
-        ConnectString = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
+        connect_string = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
         if distutils.util.strtobool(PersistentLobbyRoleEnable):
-            active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
+            active_lobby_message = await lobby_channel.send(
+                f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {connect_string}',
+                allowed_mentions=allowed_mentions)
         else:
-            active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
+            active_lobby_message = await lobby_channel.send(
+                f'\n {lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {connect_string}',
+                allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
-        await client.change_presence(status=discord.Status.idle, activity=discord.Game(f"{BotGame}"))
-        print('Updated discord status')
+        await bot.change_presence(status=discord.Status.idle, activity=discord.Game(f"{BotGame}"))
+        print(f'Updated discord presence to playing {BotGame}')
         print(f'Sleeping for {PingRemovalTimer} before removing ping message')
         await asyncio.sleep(PingRemovalTimerSeconds)
         print(f'PingRemovalTimer expired, removing ping message')
         embed = discord.Embed(title='SERVER IS FILLING UP, GET IN THERE!',
-                              description=f'{client.user.display_name} is napping, lobby will return after {LobbyCooldown}',
+                              description=f'{bot.user.display_name} is napping, lobby will return after {LobbyCooldown}',
                               color=int(NappingMessageColor, 16))
         await active_lobby_message.edit(embed=embed, content='')
         print(f'Napping notification sent, sleeping until LobbyCooldown ({LobbyCooldown}) has passed since pings')
@@ -310,7 +401,8 @@ async def activate_lobby(lobby_message, targetindex):
 
         # don't reactivate lobby until we fall below the restart threshold
         while serverinfo[targetindex].player_count > int(LobbyRestartThreshold):
-            print(f'Lobby active and minimum threshold is met ({serverinfo[targetindex].player_count}>{LobbyRestartThreshold}), sleeping some more')
+            print(
+                f'Lobby active and minimum threshold is met ({serverinfo[targetindex].player_count}>{LobbyRestartThreshold}), sleeping some more')
             await asyncio.sleep(60)
             # if lobby is launched in main loop (and not on_reaction_add) it will stop the main loop from updating server info
             # we need to update server info if it's stale (older than 60s), after lobby resets we will return to main loop
@@ -324,7 +416,8 @@ async def activate_lobby(lobby_message, targetindex):
 
         if serverinfo[targetindex].player_count <= int(LobbyRestartThreshold):
             # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
-            print(f'We fell below the minimum player threshold ({serverinfo[targetindex].player_count}<={LobbyRestartThreshold})')
+            print(
+                f'We fell below the minimum player threshold ({serverinfo[targetindex].player_count}<={LobbyRestartThreshold})')
             print(f'Cleaning up and restarting lobby...')
             await active_lobby_message.delete()
             LobbyActive = False
@@ -354,7 +447,7 @@ async def update_lobby_members():
 
 
 # main function for catching user reactions
-@client.event
+@bot.event
 async def on_reaction_add(reaction, member):
     if not member.bot:
         if reaction.message.id == main_lobby_message.id:
@@ -381,22 +474,26 @@ async def on_reaction_add(reaction, member):
                         # over the threshold, all other timers should work fine
                         await update_msg(main_lobby_message)
                         await asyncio.sleep(ReactionIntervalsSeconds[i])
-                        print(f'Timer expired for {member.display_name} for "{lobby_role.name}" after {ReactionIntervals[i]}!')
+                        print(
+                            f'Timer expired for {member.display_name} for "{lobby_role.name}" after {ReactionIntervals[i]}!')
                         # after the selected time has passed, check if the message still exists
                         reacted_message_deleted = await is_message_deleted(lobby_channel, reacted_message_id)
                         if reacted_message_deleted:
-                            print(f'{member.display_name} reacted to message {reacted_message_id} but it no longer exists, doing nothing')
+                            print(
+                                f'{member.display_name} reacted to message {reacted_message_id} but it no longer exists, doing nothing')
                             pass
                         else:
                             # the message still exists, lets check if they're still in the lobby
                             await update_lobby_members()
                             if any(lobbymemberid == member.id for lobbymemberid in CurrentLobbyMemberIDs):
                                 # if they're still there, AND if the original message they reacted to still exists, remove them
-                                print(f'{member.display_name} reacted to message {reacted_message_id} which still exists, removing them')
+                                print(
+                                    f'{member.display_name} reacted to message {reacted_message_id} which still exists, removing them')
                                 await reaction.remove(member)
                             else:
                                 # if they're not, do nothing (may have removed themselves before the timer was up)
-                                print(f'{ReactionIntervals[i]} timer expired for {member.display_name} but they were previously removed from {lobby_role.name}')
+                                print(
+                                    f'{ReactionIntervals[i]} timer expired for {member.display_name} but they were previously removed from {lobby_role.name}')
         else:
             pass
 
@@ -404,7 +501,7 @@ async def on_reaction_add(reaction, member):
 # function for catching reaction removals, this fires any time any reaction is removed
 # we do not get information about how the reaction was removed (by original user or bot)
 # so this should be kept as simple as possible
-@client.event
+@bot.event
 async def on_reaction_remove(reaction, member):
     if reaction.message.id == main_lobby_message.id:
         for i in range(len(ReactionEmojis)):
@@ -414,4 +511,4 @@ async def on_reaction_remove(reaction, member):
                 await update_msg(main_lobby_message)
 
 
-client.run(DiscordBotToken)
+bot.run(DiscordBotToken)

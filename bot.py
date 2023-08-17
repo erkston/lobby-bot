@@ -22,7 +22,7 @@ BotAdminRole = config['BotAdminRole']
 LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
 PersistentLobbyRole = config['PersistentLobbyRole']
-PersistentLobbyRoleEnable = config['PersistentLobbyRoleEnable']
+PersistentLobbyRolePingEnable = config['PersistentLobbyRolePingEnable']
 LobbyMessageTitle = config['LobbyMessageTitle']
 LobbyMessageColor = config['LobbyMessageColor']
 NappingMessageColor = config['NappingMessageColor']
@@ -43,7 +43,7 @@ CurrentLobbyMemberIDs = []
 LobbyActive = False
 UpdatingServerInfo = False
 allowed_mentions = discord.AllowedMentions(roles=True)
-lbsetCommandList = ["BotGame", "PersistentLobbyRoleEnable", "LobbyMessageTitle", "LobbyMessageColor", "NappingMessageColor",
+lbsetCommandList = ["BotGame", "PersistentLobbyRolePingEnable", "LobbyMessageTitle", "LobbyMessageColor", "NappingMessageColor",
                     "LobbyThreshold", "LobbyRestartThreshold", "LobbyCooldown", "PingRemovalTimer"]
 
 
@@ -113,11 +113,11 @@ async def lbset(ctx, setting: discord.Option(autocomplete=discord.utils.basic_au
                 await bot.change_presence(status=discord.Status.idle, activity=discord.Game(f"{BotGame}"))
                 print(f'Updated discord presence to playing {BotGame}')
 
-        elif setting.casefold() == "persistentlobbyroleenable":
-            global PersistentLobbyRoleEnable
-            PersistentLobbyRoleEnable = value
-            await ctx.respond(f'PersistentLobbyRoleEnable has been set to "{PersistentLobbyRoleEnable}"')
-            print(f'PersistentLobbyRoleEnable changed to {PersistentLobbyRoleEnable} by {ctx.author.display_name}')
+        elif setting.casefold() == "persistentlobbyrolepingenable":
+            global PersistentLobbyRolePingEnable
+            PersistentLobbyRolePingEnable = value
+            await ctx.respond(f'PersistentLobbyRolePingEnable has been set to "{PersistentLobbyRolePingEnable}"')
+            print(f'PersistentLobbyRolePingEnable changed to {PersistentLobbyRolePingEnable} by {ctx.author.display_name}')
 
         elif setting.casefold() == "lobbymessagetitle":
             global LobbyMessageTitle
@@ -186,7 +186,7 @@ async def on_ready():
     print(f'LobbyChannelName: {LobbyChannelName}')
     print(f'LobbyRole: {LobbyRole}')
     print(f'PersistentLobbyRole: {PersistentLobbyRole}')
-    print(f'PersistentLobbyRoleEnable: {PersistentLobbyRoleEnable}')
+    print(f'PersistentLobbyRolePingEnable: {PersistentLobbyRolePingEnable}')
     print(f'BotGame: {BotGame}')
     print(f'BotAdminRole: {BotAdminRole}')
     print(f'LobbyMessageTitle: {LobbyMessageTitle}')
@@ -365,7 +365,7 @@ async def activate_lobby(lobby_message, targetindex):
         # no mentions allowed in embeds, so it has to be ugly :(
 
         connect_string = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
-        if distutils.util.strtobool(PersistentLobbyRoleEnable):
+        if distutils.util.strtobool(PersistentLobbyRolePingEnable):
             active_lobby_message = await lobby_channel.send(
                 f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {connect_string}',
                 allowed_mentions=allowed_mentions)

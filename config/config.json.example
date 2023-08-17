@@ -6,7 +6,7 @@
     "LobbyChannelName": "lobby-bot",
     "LobbyRole": "Server Lobby",
     "PersistentLobbyRole": "Server Lover",
-    "PersistentLobbyRoleEnable": "True",
+    "PersistentLobbyRolePingEnable": "True",
     "LobbyMessageTitle": "My Lobby!",
     "LobbyMessageColor": "388727",
     "NappingMessageColor": "715814",

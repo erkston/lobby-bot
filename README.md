@@ -40,3 +40,5 @@ Examples:
 
 Setting names are not case-sensitive, however the setting values need to follow the same format as in the config or things will start breaking.
 Cooldowns/timers need to have units (s, m, or h), colors are in hex, thresholds are integers, and PersistentLobbyRolePingEnable is true/false.
+
+Depending on the current state of the lobby and which setting you are changing it may update the lobby message immediately, or it may not be visible other than the bot's reply to your command.

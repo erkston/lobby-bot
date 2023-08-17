@@ -2,6 +2,7 @@
 import a2s
 import asyncio
 import datetime
+import distutils
 from datetime import timezone
 from zoneinfo import ZoneInfo
 import tzdata
@@ -19,6 +20,7 @@ BotTimezone = config['BotTimezone']
 LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
 PersistentLobbyRole = config['PersistentLobbyRole']
+PersistentLobbyRoleEnable = config['PersistentLobbyRoleEnable']
 LobbyMessageTitle = config['LobbyMessageTitle']
 LobbyMessageColor = config['LobbyMessageColor']
 NappingMessageColor = config['NappingMessageColor']
@@ -102,6 +104,7 @@ async def on_ready():
     print(f'LobbyChannelName: {LobbyChannelName}')
     print(f'LobbyRole: {LobbyRole}')
     print(f'PersistentLobbyRole: {PersistentLobbyRole}')
+    print(f'PersistentLobbyRoleEnable: {PersistentLobbyRoleEnable}')
     print(f'LobbyMessageTitle: {LobbyMessageTitle}')
     print(f'LobbyMessageColor: {LobbyMessageColor}')
     print(f'NappingMessageColor: {NappingMessageColor}')
@@ -270,14 +273,17 @@ async def activate_lobby(lobby_message, targetindex):
         # no mentions allowed in embeds, so it has to be ugly :(
 
         ConnectString = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
-        active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
+        if distutils.util.strtobool(PersistentLobbyRoleEnable):
+            active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} {persistent_lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
+        else:
+            active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
         print(f'Sleeping for {PingRemovalTimer} before removing ping message')
         await asyncio.sleep(PingRemovalTimerSeconds)
         print(f'PingRemovalTimer expired, removing ping message')
         embed = discord.Embed(title='SERVER IS FILLING UP, GET IN THERE!',
-                              description=f'{client.user.display_name} is napping, lobby will return later',
+                              description=f'{client.user.display_name} is napping, lobby will return after {LobbyCooldown}',
                               color=int(NappingMessageColor, 16))
         await active_lobby_message.edit(embed=embed, content='')
         print(f'Napping notification sent, sleeping until LobbyCooldown ({LobbyCooldown}) has passed since pings')

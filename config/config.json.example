@@ -1,6 +1,7 @@
 {
     "DiscordBotToken": "YOUR_BOT_TOKEN",
     "BotTimezone": "America/New_York",
+    "BotGame": "Team Fortress 2",
     "LobbyChannelName": "lobby-bot",
     "LobbyRole": "Server Lobby",
     "PersistentLobbyRole": "Server Lover",

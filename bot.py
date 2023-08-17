@@ -17,6 +17,7 @@ with open("config/config.json", "r") as jsonfile:
     config = json.load(jsonfile)
 DiscordBotToken = config['DiscordBotToken']
 BotTimezone = config['BotTimezone']
+BotGame = config['BotGame']
 LobbyChannelName = config['LobbyChannelName']
 LobbyRole = config['LobbyRole']
 PersistentLobbyRole = config['PersistentLobbyRole']
@@ -105,6 +106,7 @@ async def on_ready():
     print(f'LobbyRole: {LobbyRole}')
     print(f'PersistentLobbyRole: {PersistentLobbyRole}')
     print(f'PersistentLobbyRoleEnable: {PersistentLobbyRoleEnable}')
+    print(f'BotGame: {BotGame}')
     print(f'LobbyMessageTitle: {LobbyMessageTitle}')
     print(f'LobbyMessageColor: {LobbyMessageColor}')
     print(f'NappingMessageColor: {NappingMessageColor}')
@@ -153,7 +155,6 @@ async def on_ready():
     print('Finished checking for old messages')
     print('------------------------------------------------------')
 
-
     await initialize_lobby_message()
 
     await mainloop.start(main_lobby_message)
@@ -174,6 +175,10 @@ async def initialize_lobby_message():
     for emoji in ReactionEmojis:
         await main_lobby_message.add_reaction(emoji)
     print(f'Lobby message ID {main_lobby_message.id}')
+    await client.change_presence(status=discord.Status.online,
+                                 activity=discord.Activity(type=discord.ActivityType.listening,
+                                                           name=f"#{lobby_channel}"))
+    print('Updated discord status')
 
 
 async def is_message_deleted(channel, message_id):
@@ -279,6 +284,8 @@ async def activate_lobby(lobby_message, targetindex):
             active_lobby_message = await lobby_channel.send(f'\n {lobby_role.mention} \n**SERVER IS FILLING UP, GET IN HERE!**\n\n{serverinfo[targetindex].server_name} \n**Connect:** {ConnectString}', allowed_mentions=allowed_mentions)
 
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
+        await client.change_presence(status=discord.Status.idle, activity=discord.Game(f"{BotGame}"))
+        print('Updated discord status')
         print(f'Sleeping for {PingRemovalTimer} before removing ping message')
         await asyncio.sleep(PingRemovalTimerSeconds)
         print(f'PingRemovalTimer expired, removing ping message')

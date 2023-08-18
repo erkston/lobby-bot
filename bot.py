@@ -422,7 +422,7 @@ async def update_msg(lobby_message):
                 else:
                     print(f'We are below the nudge threshold but NudgeMessageEnable is {NudgeMessageEnable}, doing nothing')
             else:
-                print(f'Need more players than {NudgeThreshold}, not nudging')
+                print(f'Need more than {NudgeThreshold} players, not nudging')
         else:
             while UpdatingServerInfo:
                 print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')

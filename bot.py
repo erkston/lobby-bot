@@ -174,6 +174,34 @@ async def lbset(ctx, setting: discord.Option(autocomplete=discord.utils.basic_au
         print(f'Received command from {ctx.author.display_name} who does not have admin role "{bot_admin_role}"!')
 
 
+@bot.command(name="lbcfg", description="Sends a DM with current configuration settings")
+async def lbcfg(ctx):
+    if bot_admin_role in ctx.author.roles:
+        print(f'Received cfg request from {ctx.author.display_name}, sending them a message...')
+        await ctx.author.send(f'Current configuration:\n'
+                              f'BotTimezone: {BotTimezone}\n'
+                              f'BotGame: {BotGame}\n'
+                              f'BotAdminRole : {BotAdminRole}\n'
+                              f'LobbyChannelName: {LobbyChannelName}\n'
+                              f'LobbyRole: {LobbyRole}\n'
+                              f'PersistentLobbyRole: {PersistentLobbyRole}\n'
+                              f'PersistentLobbyRolePingEnable: {PersistentLobbyRolePingEnable}\n'
+                              f'LobbyMessageTitle: {LobbyMessageTitle}\n'
+                              f'LobbyMessageColor: {LobbyMessageColor}\n'
+                              f'NappingMessageColor: {NappingMessageColor}\n'
+                              f'LobbyThreshold: {LobbyThreshold}\n'
+                              f'LobbyRestartThreshold: {LobbyRestartThreshold}\n'
+                              f'LobbyCooldown: {LobbyCooldown}\n'
+                              f'PingRemovalTimer: {PingRemovalTimer}\n'
+                              f'Some settings hidden, please edit config file')
+        await ctx.respond('Check your DMs')
+        print(f'Sent config readout to {ctx.author.display_name}')
+
+    else:
+        await ctx.respond('You do not have appropriate permissions! Leave me alone!!')
+        print(f'Received cfg request from {ctx.author.display_name} who does not have admin role "{bot_admin_role}"!')
+
+
 # run once at bot start
 @bot.event
 async def on_ready():

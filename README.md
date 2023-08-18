@@ -30,7 +30,7 @@ The server should have a dedicated channel and role as well (see config below)
 - PingRemovalTimer* - The bot will remove the message with the Role pings after this amount of time has passed. Must have units attached (10m, 30m, 1h, etc) 
 - Servers - List of servers to check, can be any number of servers as long as the syntax is preserved. The bot will check current playercount for all servers in the list and select the one with the most players to direct lobby members to.
 - ReactionEmojis and ReactionIntervals - These are used for the reactions on the lobby message that users will click to join the lobby. There can be any number of each, so long as each emoji has a corresponding time interval. From top to bottom in the config they will appear in discord left to right. Time intervals must have units attached (30s, 45m, 5h, etc) 
-## Slash Command Configuration (/lbset)
+## Slash Command Configuration (/lbset and /lbcfg)
 Any option listed with an asterisk(*) above can be modified on the fly by using "/lbset SETTING VALUE". Tab completion also works for those settings that are settable using the command.
 Changing settings via the command has the benifit of not kicking everyone from the current lobby, however not all settings are available this way and some must be changed via config.json with a bot restart. Any changes made using the command are also temporary until the next restart. Permanent changes must be made in the config file.
 
@@ -42,3 +42,5 @@ Setting names are not case-sensitive, however the setting values need to follow 
 Cooldowns/timers need to have units (s, m, or h), colors are in hex, thresholds are integers, and PersistentLobbyRolePingEnable is true/false.
 
 Depending on the current state of the lobby and which setting you are changing it may update the lobby message immediately, or it may not be visible other than the bot's reply to your command.
+
+/lbcfg will send you a DM with most of the current configuration settings (BotAdminRole still required)

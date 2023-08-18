@@ -43,6 +43,7 @@ Examples:
 - /lbset LobbyThreshold 14
 - /lbset LobbyCooldown 2h
 - /lbset NudgeMessageEnable False
+- /lbset NudgeCooldown 1h
 
 Setting names are not case-sensitive, however the setting values need to follow the same format as in the config or things will start breaking.
 Cooldowns/timers need to have units (s, m, or h), colors are in hex, thresholds are integers, and Enable options are true/false.

@@ -3,6 +3,7 @@ import a2s
 import asyncio
 import datetime
 import distutils
+import random
 from datetime import timezone
 from zoneinfo import ZoneInfo
 import tzdata
@@ -26,6 +27,10 @@ PersistentLobbyRolePingEnable = config['PersistentLobbyRolePingEnable']
 LobbyMessageTitle = config['LobbyMessageTitle']
 LobbyMessageColor = config['LobbyMessageColor']
 NappingMessageColor = config['NappingMessageColor']
+NudgeMessageEnable = config['NudgeMessageEnable']
+NudgeCooldown = config['NudgeCooldown']
+NudgeThreshold = config['NudgeThreshold']
+NudgeChannelName = config['NudgeChannelName']
 LobbyThreshold = config['LobbyThreshold']
 LobbyRestartThreshold = config['LobbyRestartThreshold']
 LobbyCooldown = config['LobbyCooldown']
@@ -33,6 +38,7 @@ PingRemovalTimer = config['PingRemovalTimer']
 Servers = config['Servers']
 ReactionEmojis = config['ReactionEmojis']
 ReactionIntervals = config['ReactionIntervals']
+NudgeMessages = config['NudgeMessages']
 
 # declaring other stuff
 ReactionIntervalsSeconds = []
@@ -40,11 +46,14 @@ Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'
 serverinfo = []
 CurrentLobbyMembers = []
 CurrentLobbyMemberIDs = []
+utc = datetime.datetime.now(timezone.utc)
+nudge_utc_ts = utc.timestamp()
 LobbyActive = False
 UpdatingServerInfo = False
 allowed_mentions = discord.AllowedMentions(roles=True)
 lbsetCommandList = ["BotGame", "PersistentLobbyRolePingEnable", "LobbyMessageTitle", "LobbyMessageColor", "NappingMessageColor",
-                    "LobbyThreshold", "LobbyRestartThreshold", "LobbyCooldown", "PingRemovalTimer"]
+                    "LobbyThreshold", "LobbyRestartThreshold", "LobbyCooldown", "PingRemovalTimer", "NudgeMessageEnable",
+                    "NudgeCooldown", "NudgeThreshold"]
 
 
 # convert config time intervals into seconds (once) for use in asyncio.sleep
@@ -61,6 +70,7 @@ for interval in ReactionIntervals:
 LobbyCooldownSeconds = convert_to_seconds(LobbyCooldown)
 PingRemovalTimerSeconds = convert_to_seconds(PingRemovalTimer)
 NaptimeRemainingSeconds = LobbyCooldownSeconds - PingRemovalTimerSeconds
+NudgeCooldownSeconds = convert_to_seconds(NudgeCooldown)
 
 # convert config emojis into a string for discord embed message (once)
 IntervalsString = ""
@@ -166,6 +176,30 @@ async def lbset(ctx, setting: discord.Option(autocomplete=discord.utils.basic_au
             NaptimeRemainingSeconds = LobbyCooldownSeconds - PingRemovalTimerSeconds
             await ctx.respond(f'PingRemovalTimer has been set to {PingRemovalTimer}')
             print(f'PingRemovalTimer changed to {PingRemovalTimer} ({PingRemovalTimerSeconds}s) by {ctx.author.display_name}')
+
+        elif setting.casefold() == "nudgemessageenable":
+            global NudgeMessageEnable
+            NudgeMessageEnable = value
+            await ctx.respond(f'NudgeMessageEnable has been set to {NudgeMessageEnable}')
+            print(f'NudgeMessageEnable changed to {NudgeMessageEnable} by {ctx.author.display_name}')
+            await update_msg(main_lobby_message)
+
+        elif setting.casefold() == "nudgecooldown":
+            global NudgeCooldown
+            global NudgeCooldownSeconds
+            NudgeCooldown = value
+            NudgeCooldownSeconds = convert_to_seconds(NudgeCooldown)
+            await ctx.respond(f'NudgeCooldown has been set to {NudgeCooldown}')
+            print(f'NudgeCooldown changed to {NudgeCooldown} ({NudgeCooldownSeconds}s) by {ctx.author.display_name}')
+            await update_msg(main_lobby_message)
+
+        elif setting.casefold() == "nudgethreshold":
+            global NudgeThreshold
+            NudgeThreshold = value
+            await ctx.respond(f'NudgeThreshold has been set to {NudgeThreshold}')
+            print(f'NudgeThreshold changed to {NudgeThreshold} by {ctx.author.display_name}')
+            await update_msg(main_lobby_message)
+
         else:
             await ctx.respond("I don't have that setting, please try again")
             print(f'Received command from {ctx.author.display_name} but I did not understand it :(')
@@ -189,6 +223,10 @@ async def lbcfg(ctx):
                               f'LobbyMessageTitle: {LobbyMessageTitle}\n'
                               f'LobbyMessageColor: {LobbyMessageColor}\n'
                               f'NappingMessageColor: {NappingMessageColor}\n'
+                              f'NudgeMessageEnable: {NudgeMessageEnable}\n'
+                              f'NudgeCooldown: {NudgeCooldown}\n'
+                              f'NudgeThreshold: {NudgeThreshold}\n'
+                              f'NudgeChannelName: {NudgeChannelName}\n'
                               f'LobbyThreshold: {LobbyThreshold}\n'
                               f'LobbyRestartThreshold: {LobbyRestartThreshold}\n'
                               f'LobbyCooldown: {LobbyCooldown}\n'
@@ -220,6 +258,10 @@ async def on_ready():
     print(f'LobbyMessageTitle: {LobbyMessageTitle}')
     print(f'LobbyMessageColor: {LobbyMessageColor}')
     print(f'NappingMessageColor: {NappingMessageColor}')
+    print(f'NudgeMessageEnable: {NudgeMessageEnable}')
+    print(f'NudgeCooldown: {NudgeCooldown}')
+    print(f'NudgeThreshold: {NudgeThreshold}')
+    print(f'NudgeChannelName: {NudgeChannelName}')
     print(f'LobbyThreshold: {LobbyThreshold}')
     print(f'LobbyRestartThreshold: {LobbyRestartThreshold}')
     print(f'LobbyCooldown: {LobbyCooldown}')
@@ -228,21 +270,25 @@ async def on_ready():
         print(f'Servers[{i}]: {Servers[i]}')
     for i in range(len(ReactionEmojis)):
         print(f'ReactionEmojis[{i}]: {ReactionEmojis[i]} for interval {ReactionIntervals[i]}')
+    for i in range(len(NudgeMessages)):
+        print(f'NudgeMessages[{i}]: {NudgeMessages[i]}')
     print('------------------------------------------------------')
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print(f'{bot.user} is connected to the following guild(s):')
     for guild in bot.guilds:
         print(f'{guild.name} (id: {guild.id})')
 
-    # iterate through channels to find the one that matches the name in the config
     global lobby_channel
+    global nudge_channel
     for guild in bot.guilds:
         for channel in guild.channels:
             if channel.name == LobbyChannelName:
                 lobby_channel = channel
-                print(f'Channel found: #{lobby_channel.name} (ID: {lobby_channel.id})')
+                print(f'Lobby Channel found: #{lobby_channel.name} (ID: {lobby_channel.id})')
+            if channel.name == NudgeChannelName:
+                nudge_channel = channel
+                print(f'Nudge Channel found: #{nudge_channel.name} (ID: {nudge_channel.id})')
 
-    # iterate through roles to find the one that matches the names in the config
     global lobby_role
     global persistent_lobby_role
     global bot_admin_role
@@ -348,7 +394,6 @@ async def update_msg(lobby_message):
         CurrentLobbySize = len(CurrentLobbyMembers)
         s = ", "
         LobbyMembersString = s.join(CurrentLobbyMembers)
-        # if no members display "None" in discord
         if not LobbyMembersString:
             LobbyMembersString = "None"
         # if the threshold is not met AND lobby is not already active, display lobby info in embed
@@ -370,6 +415,14 @@ async def update_msg(lobby_message):
             await lobby_message.edit(embed=embed)
             now = datetime.datetime.now(ZoneInfo(BotTimezone))
             print(f'Lobby message updated ' + now.strftime("%Y-%m-%d %H:%M:%S"))
+            if int(LobbyThreshold) - CurrentServerPlayers - CurrentLobbySize <= int(NudgeThreshold):
+                if distutils.util.strtobool(NudgeMessageEnable):
+                    print(f'We are below the nudge threshold ({LobbyThreshold}-{CurrentServerPlayers}-{CurrentLobbySize}<={NudgeThreshold}), attempting to nudge')
+                    await nudge()
+                else:
+                    print(f'We are below the nudge threshold but NudgeMessageEnable is {NudgeMessageEnable}, doing nothing')
+            else:
+                print(f'Need more players than {NudgeThreshold}, not nudging')
         else:
             while UpdatingServerInfo:
                 print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')
@@ -415,7 +468,7 @@ async def activate_lobby(lobby_message, targetindex):
         print(f'Napping notification sent, sleeping until LobbyCooldown ({LobbyCooldown}) has passed since pings')
         await asyncio.sleep(NaptimeRemainingSeconds)
         print(f'My nap is over! LobbyCooldown ({LobbyCooldown}) has passed since pings were sent')
-        embed = discord.Embed(title='I am awake!',
+        embed = discord.Embed(title='Get on the server!',
                               description=f'Lobby will return when less than {LobbyRestartThreshold} players are online',
                               color=int(NappingMessageColor, 16))
         await active_lobby_message.edit(embed=embed, content='')
@@ -474,7 +527,21 @@ async def update_lobby_members():
         print(" ".join(CurrentLobbyMembers))
 
 
-# main function for catching user reactions
+async def nudge():
+    global nudge_utc_ts
+    global nudge_channel
+    global NudgeMessages
+    utc = datetime.datetime.now(timezone.utc)
+    utc_timestamp = utc.timestamp()
+    if utc_timestamp - nudge_utc_ts > NudgeCooldownSeconds:
+        print(f'{NudgeCooldown} has passed since last nudge, sending new nudge')
+        await nudge_channel.send(f'{random.choice(NudgeMessages)} {lobby_channel.mention}')
+        utc = datetime.datetime.now(timezone.utc)
+        nudge_utc_ts = utc.timestamp()
+    else:
+        print(f'{NudgeCooldown} has not passed since last nudge, doing nothing')
+
+
 @bot.event
 async def on_reaction_add(reaction, member):
     if not member.bot:

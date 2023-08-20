@@ -2,10 +2,10 @@
 import a2s
 import asyncio
 import datetime
+from datetime import timezone
 import distutils
 from distutils import util
 import random
-from datetime import timezone
 from zoneinfo import ZoneInfo
 import tzdata
 import discord
@@ -45,6 +45,7 @@ NudgeMessages = config['NudgeMessages']
 ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 serverinfo = []
+LobbyTimers = []
 CurrentLobbyMembers = []
 CurrentLobbyMemberIDs = []
 utc = datetime.datetime.now(timezone.utc)
@@ -104,6 +105,18 @@ class Bot(discord.Bot):
 intents = discord.Intents.default()
 intents.members = True
 bot = Bot(intents=intents)
+
+
+class LobbyTimer:
+    def __init__(self, reacter, display_name, id, timer, timer_end_utc, reacted_message_id, reaction_utc, reaction_emoji):
+        self.reacter = reacter
+        self.display_name = display_name
+        self.id = id
+        self.timer = timer
+        self.timer_end_utc = timer_end_utc
+        self.reacted_message_id = reacted_message_id
+        self.reaction_utc = reaction_utc
+        self.reaction_emoji = reaction_emoji
 
 
 @bot.command(name="lbset", description="Change setting values")
@@ -325,6 +338,7 @@ async def on_ready():
 @tasks.loop(minutes=1)
 async def mainloop(lobby_message):
     await update_servers()
+    await evaluate_timers()
     await update_msg(lobby_message)
 
 
@@ -354,6 +368,7 @@ async def is_message_deleted(channel, message_id):
 # function to update server, only runs in mainloop and activate_lobby (once per minute)
 # and should not be called otherwise
 async def update_servers():
+    global UpdatingServerInfo
     UpdatingServerInfo = True
     print(f'Updating server information...')
     global serverinfo
@@ -384,30 +399,30 @@ async def update_msg(lobby_message):
             if serverinfo[i].player_count > serverinfo[targetindex].player_count:
                 targetindex = i
         # embeds won't let you do this directly
-        CurrentServerPlayers = serverinfo[targetindex].player_count
-        DiscordersRequired = int(LobbyThreshold) - CurrentServerPlayers
+        current_server_players = serverinfo[targetindex].player_count
+        discorders_required = int(LobbyThreshold) - current_server_players
         print(
-            f'Current target server is {serverinfo[targetindex].server_name} with {CurrentServerPlayers} players online')
+            f'Current target server is {serverinfo[targetindex].server_name} with {current_server_players} players online')
         await update_lobby_members()
         # pause a second for members to update
         await asyncio.sleep(1)
         # get lobby members and format into nice string for discord embed
-        CurrentLobbySize = len(CurrentLobbyMembers)
+        current_lobby_size = len(CurrentLobbyMembers)
         s = ", "
-        LobbyMembersString = s.join(CurrentLobbyMembers)
-        if not LobbyMembersString:
-            LobbyMembersString = "None"
+        lobby_members_string = s.join(CurrentLobbyMembers)
+        if not lobby_members_string:
+            lobby_members_string = "None"
         # if the threshold is not met AND lobby is not already active, display lobby info in embed
-        if CurrentServerPlayers + CurrentLobbySize < int(LobbyThreshold) and LobbyActive is False:
+        if current_server_players + current_lobby_size < int(LobbyThreshold) and LobbyActive is False:
             print(
-                f'Lobby threshold not met ({CurrentLobbySize}+{CurrentServerPlayers}<{LobbyThreshold}), displaying lobby information')
+                f'Lobby threshold not met ({current_lobby_size}+{current_server_players}<{LobbyThreshold}), displaying lobby information')
             embed = discord.Embed(title=f'{LobbyMessageTitle}',
                                   description='Pings will be sent once ' + LobbyThreshold + ' players are ready \nCurrently ' + str(
-                                      CurrentServerPlayers) + ' player(s) in-game and ' + str(
-                                      DiscordersRequired) + ' more needed here!',
+                                      current_server_players) + ' player(s) in-game and ' + str(
+                                      discorders_required) + ' more needed here!',
                                   color=int(LobbyMessageColor, 16))
-            embed.add_field(name='Players in lobby (' + str(CurrentLobbySize) + "/" + str(
-                DiscordersRequired) + '):', value=LobbyMembersString,
+            embed.add_field(name='Players in lobby (' + str(current_lobby_size) + "/" + str(
+                discorders_required) + '):', value=lobby_members_string,
                             inline=False)
             embed.add_field(name='\u200b', value='\u200b', inline=False)
             embed.add_field(name='React below to join!', value=IntervalsString, inline=False)
@@ -416,9 +431,9 @@ async def update_msg(lobby_message):
             await lobby_message.edit(embed=embed)
             now = datetime.datetime.now(ZoneInfo(BotTimezone))
             print(f'Lobby message updated ' + now.strftime("%Y-%m-%d %H:%M:%S"))
-            if int(LobbyThreshold) - CurrentServerPlayers - CurrentLobbySize <= int(NudgeThreshold):
+            if int(LobbyThreshold) - current_server_players - current_lobby_size <= int(NudgeThreshold):
                 if distutils.util.strtobool(NudgeMessageEnable):
-                    print(f'We are below the nudge threshold ({LobbyThreshold}-{CurrentServerPlayers}-{CurrentLobbySize}<={NudgeThreshold}), attempting to nudge')
+                    print(f'We are below the nudge threshold ({LobbyThreshold}-{current_server_players}-{current_lobby_size}<={NudgeThreshold}), attempting to nudge')
                     await nudge()
                 else:
                     print(f'We are below the nudge threshold but NudgeMessageEnable is {NudgeMessageEnable}, doing nothing')
@@ -428,7 +443,7 @@ async def update_msg(lobby_message):
             while UpdatingServerInfo:
                 print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')
                 await asyncio.sleep(3)
-            print(f'Lobby threshold met! ({CurrentLobbySize}+{CurrentServerPlayers}>={LobbyThreshold})')
+            print(f'Lobby threshold met! ({current_lobby_size}+{current_server_players}>={LobbyThreshold})')
             await activate_lobby(lobby_message, targetindex)
         return
 
@@ -498,13 +513,16 @@ async def activate_lobby(lobby_message, targetindex):
 
         if serverinfo[targetindex].player_count <= int(LobbyRestartThreshold):
             # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
-            print(
-                f'We fell below the minimum player threshold ({serverinfo[targetindex].player_count}<={LobbyRestartThreshold})')
+            print(f'We fell below the minimum player threshold ({serverinfo[targetindex].player_count}<={LobbyRestartThreshold})')
             print(f'Cleaning up and restarting lobby...')
             await active_lobby_message.delete()
             LobbyActive = False
             for member in lobby_role.members:
                 await member.remove_roles(lobby_role)
+            print('Removed all role members!')
+            LobbyTimers.clear()
+            if not LobbyTimers:
+                print('Timers cleared!')
             await initialize_lobby_message()
             await update_msg(main_lobby_message)
             return
@@ -514,7 +532,6 @@ async def activate_lobby(lobby_message, targetindex):
         return
 
 
-# refreshes list of lobby members
 async def update_lobby_members():
     CurrentLobbyMembers.clear()
     CurrentLobbyMemberIDs.clear()
@@ -543,67 +560,101 @@ async def nudge():
         print(f'{NudgeCooldown} has not passed since last nudge, doing nothing')
 
 
+async def evaluate_timers():
+    global LobbyTimers
+    global main_lobby_message
+    print(f'Evaluating {len(LobbyTimers)} timers...')
+    if not LobbyTimers:
+        print('No timers to evaluate :(')
+        return
+    await update_lobby_members()
+    utc = datetime.datetime.now(timezone.utc)
+    utc_timestamp = utc.timestamp()
+    i = 0
+    while i < len(LobbyTimers) and len(LobbyTimers) is not 0:
+        if i < 0:
+            i = 0
+        print(f'Checking timer for {LobbyTimers[i].display_name} ({LobbyTimers[i].timer})')
+        if not any(lobbymemberid == LobbyTimers[i].id for lobbymemberid in CurrentLobbyMemberIDs):
+            print(f'{LobbyTimers[i].display_name} had a timer but is not in the lobby, deleting their timer...')
+            del LobbyTimers[i]
+            i -= 1
+            print('Deleted orphaned timer, waiting 5 seconds')
+            await asyncio.sleep(5)
+        elif LobbyTimers[i].timer_end_utc < utc_timestamp:
+            print(f'Timer expired for {LobbyTimers[i].display_name} after {LobbyTimers[i].timer}')
+            reacted_message_deleted = await is_message_deleted(lobby_channel, LobbyTimers[i].reacted_message_id)
+            if reacted_message_deleted:
+                print(f'{LobbyTimers[i].display_name} reacted to message {LobbyTimers[i].reacted_message_id} but it no longer exists, deleting their timer...')
+                del LobbyTimers[i]
+                i -= 1
+                print('Deleted orphaned timer, waiting 5 seconds')
+                await asyncio.sleep(5)
+            else:
+                if any(lobbymemberid == LobbyTimers[i].id for lobbymemberid in CurrentLobbyMemberIDs):
+                    print(f'{LobbyTimers[i].display_name} reacted to message {LobbyTimers[i].reacted_message_id} which still exists, removing them')
+                    await main_lobby_message.remove_reaction(emoji=LobbyTimers[i].reaction_emoji, member=LobbyTimers[i].reacter)
+                    print(f'Removed {LobbyTimers[i].reaction_emoji} reaction for {LobbyTimers[i].display_name}!')
+                    # role and timer will be removed in on_reaction_remove event
+            i -= 1
+            print('Found expired timer, waiting 5 seconds for next check')
+            await asyncio.sleep(5)
+        else:
+            i += 1
+    print('Finished checking timers!')
+
+
 @bot.event
-async def on_reaction_add(reaction, member):
-    if not member.bot:
+async def on_reaction_add(reaction, reacter):
+    if not reacter.bot:
         if reaction.message.id == main_lobby_message.id:
             for i in range(len(ReactionEmojis)):
                 if reaction.emoji == ReactionEmojis[i]:
-                    # if user is already in lobby, remove this reaction but keep them in the lobby
+                    print(f'New reaction detected: {ReactionEmojis[i]} for {reacter.display_name}')
+                    # if user already has the role and a timer, remove this reaction but keep them in the lobby
                     # since this removes the reaction it will remove the role as well, so we need to give it back to them
-                    if any(role.id == lobby_role.id for role in member.roles):
-                        await reaction.remove(member)
-                        print(f'User {member.display_name} already has role "{lobby_role.name}"')
-                        # wait 2 seconds for the reaction remove event to complete before putting member back in lobby
-                        await asyncio.sleep(2)
-                        await member.add_roles(lobby_role)
+                    if any(role.id == lobby_role.id for role in reacter.roles) and any(member.id == reacter.id for member in LobbyTimers):
+                        print(f'User {reacter.display_name} already has role "{lobby_role.name}" and a timer, removing this reaction...')
+                        await reaction.remove(reacter)
+                        # wait 3 seconds for the reaction remove event to complete before putting member back in lobby
+                        await asyncio.sleep(3)
+                        await reacter.add_roles(lobby_role)
+                        print(f'User {reacter.display_name} readded to "{lobby_role.name}"')
                         await update_msg(main_lobby_message)
                     else:
                         # if member is not in lobby, put them there
                         reacted_message_id = main_lobby_message.id
-                        await member.add_roles(lobby_role)
-                        print(f'User {member.display_name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
-                        # if the lobby is started from someone's reaction, the below update_msg will be awaited until
-                        # the bot resets completely (LobbyRestartThreshold), at which point the timer will start.
-                        # shouldn't cause an issue with roles because of the reacted_message_id check but
-                        # may cause confusing console output. this only applies for the user who puts the lobby
-                        # over the threshold, all other timers should work fine
-                        await update_msg(main_lobby_message)
-                        await asyncio.sleep(ReactionIntervalsSeconds[i])
-                        print(
-                            f'Timer expired for {member.display_name} for "{lobby_role.name}" after {ReactionIntervals[i]}!')
-                        # after the selected time has passed, check if the message still exists
-                        reacted_message_deleted = await is_message_deleted(lobby_channel, reacted_message_id)
-                        if reacted_message_deleted:
-                            print(
-                                f'{member.display_name} reacted to message {reacted_message_id} but it no longer exists, doing nothing')
-                            pass
+                        await reacter.add_roles(lobby_role)
+                        print(f'User {reacter.display_name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
+                        if any(member.id == reacter.id for member in LobbyTimers):
+                            print(f'User {reacter.display_name} already has a timer registered!')
                         else:
-                            # the message still exists, lets check if they're still in the lobby
-                            await update_lobby_members()
-                            if any(lobbymemberid == member.id for lobbymemberid in CurrentLobbyMemberIDs):
-                                # if they're still there, AND if the original message they reacted to still exists, remove them
-                                print(
-                                    f'{member.display_name} reacted to message {reacted_message_id} which still exists, removing them')
-                                await reaction.remove(member)
-                            else:
-                                # if they're not, do nothing (may have removed themselves before the timer was up)
-                                print(
-                                    f'{ReactionIntervals[i]} timer expired for {member.display_name} but they were previously removed from {lobby_role.name}')
+                            utc = datetime.datetime.now(timezone.utc)
+                            utc_timestamp = utc.timestamp()
+                            timer_end_utc = utc_timestamp + ReactionIntervalsSeconds[i]
+                            LobbyTimers.append(LobbyTimer(reacter, reacter.display_name, reacter.id, ReactionIntervals[i], timer_end_utc, reacted_message_id, utc_timestamp, ReactionEmojis[i]))
+                            print(f'{ReactionEmojis[i]} timer registered for {reacter.display_name} ({ReactionIntervals[i]})')
+                            await update_msg(main_lobby_message)
         else:
             pass
 
 
-# function for catching reaction removals, this fires any time any reaction is removed
-# we do not get information about how the reaction was removed (by original user or bot)
-# so this should be kept as simple as possible
 @bot.event
-async def on_reaction_remove(reaction, member):
+async def on_reaction_remove(reaction, remover):
     if reaction.message.id == main_lobby_message.id:
-        for i in range(len(ReactionEmojis)):
-            if reaction.emoji == ReactionEmojis[i]:
-                await member.remove_roles(lobby_role)
-                print(f'User {member.display_name} removed from "{lobby_role.name}"')
+        for k in range(len(ReactionEmojis)):
+            if reaction.emoji == ReactionEmojis[k]:
+                print(f'Removed reaction detected: {ReactionEmojis[k]} for {remover.display_name}')
+                await remover.remove_roles(lobby_role)
+                print(f'User {remover.display_name} removed from "{lobby_role.name}" (removed reaction)')
+                j = 0
+                while j < len(LobbyTimers):
+                    if remover.id == LobbyTimers[j].id and reaction.emoji == LobbyTimers[j].reaction_emoji:
+                        print(f'Matching {ReactionEmojis[j]} timer found for {remover.display_name}, removing...')
+                        del LobbyTimers[j]
+                        print(f'Timer removed!')
+                        pass
+                    j += 1
                 await update_msg(main_lobby_message)
 
 

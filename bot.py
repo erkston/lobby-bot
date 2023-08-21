@@ -108,10 +108,10 @@ bot = Bot(intents=intents)
 
 
 class LobbyTimer:
-    def __init__(self, reacter, display_name, id, timer, timer_end_utc, reacted_message_id, reaction_utc, reaction_emoji):
+    def __init__(self, reacter, display_name, user_id, timer, timer_end_utc, reacted_message_id, reaction_utc, reaction_emoji):
         self.reacter = reacter
         self.display_name = display_name
-        self.id = id
+        self.user_id = user_id
         self.timer = timer
         self.timer_end_utc = timer_end_utc
         self.reacted_message_id = reacted_message_id
@@ -365,8 +365,6 @@ async def is_message_deleted(channel, message_id):
         return True
 
 
-# function to update server, only runs in mainloop and activate_lobby (once per minute)
-# and should not be called otherwise
 async def update_servers():
     global UpdatingServerInfo
     UpdatingServerInfo = True
@@ -383,8 +381,6 @@ async def update_servers():
     UpdatingServerInfo = False
 
 
-# main function for evaluating server info and updating lobby message
-# does NOT refresh server info as it would ping servers very frequently
 async def update_msg(lobby_message):
     if LobbyActive is True:
         now = datetime.datetime.now(ZoneInfo(BotTimezone))
@@ -458,9 +454,7 @@ async def activate_lobby(lobby_message, targetindex):
         # delete old lobby message and send a new message (can't notify role members in edits)
         await lobby_message.delete()
         print(f'Old lobby message deleted')
-        # new message with role mention to notify lobby members
-        # no mentions allowed in embeds, so it has to be ugly :(
-
+        # no mentions allowed in embeds, so this has to be ugly :(
         connect_string = "".join(["steam://connect/", str(Servers[targetindex][0]), ":", str(Servers[targetindex][1])])
         if distutils.util.strtobool(PersistentLobbyRolePingEnable):
             active_lobby_message = await lobby_channel.send(
@@ -569,11 +563,11 @@ async def evaluate_timers():
     utc = datetime.datetime.now(timezone.utc)
     utc_timestamp = utc.timestamp()
     i = 0
-    while i < len(LobbyTimers) and len(LobbyTimers) is not 0:
+    while i < len(LobbyTimers) != 0:
         if i < 0:
             i = 0
         print(f'Checking timer for {LobbyTimers[i].display_name} ({LobbyTimers[i].timer})')
-        if not any(lobbymemberid == LobbyTimers[i].id for lobbymemberid in CurrentLobbyMemberIDs):
+        if not any(lobbymemberid == LobbyTimers[i].user_id for lobbymemberid in CurrentLobbyMemberIDs):
             print(f'{LobbyTimers[i].display_name} had a timer but is not in the lobby, deleting their timer...')
             del LobbyTimers[i]
             i -= 1
@@ -589,7 +583,7 @@ async def evaluate_timers():
                 print('Deleted orphaned timer, waiting 5 seconds')
                 await asyncio.sleep(5)
             else:
-                if any(lobbymemberid == LobbyTimers[i].id for lobbymemberid in CurrentLobbyMemberIDs):
+                if any(lobbymemberid == LobbyTimers[i].user_id for lobbymemberid in CurrentLobbyMemberIDs):
                     print(f'{LobbyTimers[i].display_name} reacted to message {LobbyTimers[i].reacted_message_id} which still exists, removing them')
                     await main_lobby_message.remove_reaction(emoji=LobbyTimers[i].reaction_emoji, member=LobbyTimers[i].reacter)
                     print(f'Removed {LobbyTimers[i].reaction_emoji} reaction for {LobbyTimers[i].display_name}!')
@@ -612,7 +606,7 @@ async def on_reaction_add(reaction, reacter):
                     print(f'New reaction detected: {ReactionEmojis[i]} for {reacter.display_name}')
                     # if user already has the role and a timer, remove this reaction but keep them in the lobby
                     # since this removes the reaction it will remove the role as well, so we need to give it back to them
-                    if any(role.id == lobby_role.id for role in reacter.roles) and any(member.id == reacter.id for member in LobbyTimers):
+                    if any(role.id == lobby_role.id for role in reacter.roles) and any(member.user_id == reacter.id for member in LobbyTimers):
                         print(f'User {reacter.display_name} already has role "{lobby_role.name}" and a timer, removing this reaction...')
                         await reaction.remove(reacter)
                         # wait 3 seconds for the reaction remove event to complete before putting member back in lobby
@@ -624,7 +618,7 @@ async def on_reaction_add(reaction, reacter):
                         reacted_message_id = main_lobby_message.id
                         await reacter.add_roles(lobby_role)
                         print(f'User {reacter.display_name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
-                        if any(member.id == reacter.id for member in LobbyTimers):
+                        if any(member.user_id == reacter.id for member in LobbyTimers):
                             print(f'User {reacter.display_name} already has a timer registered!')
                         else:
                             utc = datetime.datetime.now(timezone.utc)
@@ -645,7 +639,7 @@ async def on_reaction_remove(reaction, remover):
                 print(f'User {remover.display_name} removed from "{lobby_role.name}" (removed reaction)')
                 j = 0
                 while j < len(LobbyTimers):
-                    if remover.id == LobbyTimers[j].id and reaction.emoji == LobbyTimers[j].reaction_emoji:
+                    if remover.id == LobbyTimers[j].user_id and reaction.emoji == LobbyTimers[j].reaction_emoji:
                         print(f'Matching {ReactionEmojis[j]} timer found for {remover.display_name}, removing...')
                         del LobbyTimers[j]
                         print(f'Timer removed!')

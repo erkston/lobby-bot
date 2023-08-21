@@ -260,8 +260,7 @@ async def on_ready():
     print('------------------------------------------------------')
     systemtime = datetime.datetime.now()
     bottime = datetime.datetime.now(ZoneInfo(BotTimezone))
-    print(
-        f'System Time: {systemtime.strftime("%Y-%m-%d %H:%M:%S")} Bot Time: {bottime.strftime("%Y-%m-%d %H:%M:%S")} (Timezone: {BotTimezone})')
+    print(f'System Time: {systemtime.strftime("%Y-%m-%d %H:%M:%S")} Bot Time: {bottime.strftime("%Y-%m-%d %H:%M:%S")} (Timezone: {BotTimezone})')
     print('Config options:')
     print(f'LobbyChannelName: {LobbyChannelName}')
     print(f'LobbyRole: {LobbyRole}')
@@ -373,8 +372,17 @@ async def update_servers():
     global server_update_utc_ts
     serverinfo.clear()
     for i in range(len(Servers)):
-        serverinfo.append(a2s.info(tuple(Servers[i])))
-        print(f'{serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
+        try:
+            server_a2sinfo = a2s.info(tuple(Servers[i]))
+            serverinfo.append(server_a2sinfo)
+            print(f'Servers[{i}]: {serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
+        except Exception as exc:
+            print(f'EXCEPTION "{exc}" updating server {Servers[i]}!')
+    if not serverinfo:
+        print('Unable to get any server information, falling back to 74.91.112.148')
+        for i in range(len(Servers)):
+            serverinfo.append(a2s.info(tuple(["74.91.112.148", 27015])))
+            print(f'Servers[{i}]: {serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
     utc = datetime.datetime.now(timezone.utc)
     server_update_utc_ts = utc.timestamp()
     print(f'Finished updating server information')
@@ -640,7 +648,7 @@ async def on_reaction_remove(reaction, remover):
                 j = 0
                 while j < len(LobbyTimers):
                     if remover.id == LobbyTimers[j].user_id and reaction.emoji == LobbyTimers[j].reaction_emoji:
-                        print(f'Matching {ReactionEmojis[j]} timer found for {remover.display_name}, removing...')
+                        print(f'Matching {ReactionEmojis[k]} timer found for {remover.display_name}, removing...')
                         del LobbyTimers[j]
                         print(f'Timer removed!')
                     j += 1

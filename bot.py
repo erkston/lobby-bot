@@ -379,10 +379,11 @@ async def update_servers():
         except Exception as exc:
             print(f'EXCEPTION "{exc}" updating server {Servers[i]}!')
     if not serverinfo:
-        print('Unable to get any server information, falling back to 74.91.112.148')
+        print('Unable to get any server information, falling back to 74.91.112.148 and lying about playercount')
         for i in range(len(Servers)):
             serverinfo.append(a2s.info(tuple(["74.91.112.148", 27015])))
-            print(f'Servers[{i}]: {serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
+            serverinfo[i].player_count = 0
+            print(f'FALLBACK Servers[{i}]: {serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
     utc = datetime.datetime.now(timezone.utc)
     server_update_utc_ts = utc.timestamp()
     print(f'Finished updating server information')

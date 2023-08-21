@@ -506,10 +506,8 @@ async def activate_lobby(lobby_message, targetindex):
             utc = datetime.datetime.now(timezone.utc)
             utc_timestamp = utc.timestamp()
             if utc_timestamp - server_update_utc_ts > 60:
-                print(f'Server info is stale! I need to update it...')
+                print(f'Server info is stale! I will update it...')
                 await update_servers()
-            else:
-                print(f'Server info is not stale :)')
 
         if serverinfo[targetindex].player_count <= int(LobbyRestartThreshold):
             # reset by deleting the launched lobby message and remove roles (just to make sure it's empty before restarting)
@@ -600,6 +598,7 @@ async def evaluate_timers():
             print('Found expired timer, waiting 5 seconds for next check')
             await asyncio.sleep(5)
         else:
+            print('Timer not expired, continuing...')
             i += 1
     print('Finished checking timers!')
 
@@ -622,7 +621,6 @@ async def on_reaction_add(reaction, reacter):
                         print(f'User {reacter.display_name} readded to "{lobby_role.name}"')
                         await update_msg(main_lobby_message)
                     else:
-                        # if member is not in lobby, put them there
                         reacted_message_id = main_lobby_message.id
                         await reacter.add_roles(lobby_role)
                         print(f'User {reacter.display_name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
@@ -635,8 +633,6 @@ async def on_reaction_add(reaction, reacter):
                             LobbyTimers.append(LobbyTimer(reacter, reacter.display_name, reacter.id, ReactionIntervals[i], timer_end_utc, reacted_message_id, utc_timestamp, ReactionEmojis[i]))
                             print(f'{ReactionEmojis[i]} timer registered for {reacter.display_name} ({ReactionIntervals[i]})')
                             await update_msg(main_lobby_message)
-        else:
-            pass
 
 
 @bot.event
@@ -653,7 +649,6 @@ async def on_reaction_remove(reaction, remover):
                         print(f'Matching {ReactionEmojis[j]} timer found for {remover.display_name}, removing...')
                         del LobbyTimers[j]
                         print(f'Timer removed!')
-                        pass
                     j += 1
                 await update_msg(main_lobby_message)
 

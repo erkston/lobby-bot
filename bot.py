@@ -573,13 +573,10 @@ async def evaluate_timers():
     utc_timestamp = utc.timestamp()
     i = 0
     while i < len(LobbyTimers) != 0:
-        if i < 0:
-            i = 0
         print(f'Checking timer for {LobbyTimers[i].display_name} ({LobbyTimers[i].timer})')
         if not any(lobbymemberid == LobbyTimers[i].user_id for lobbymemberid in CurrentLobbyMemberIDs):
             print(f'{LobbyTimers[i].display_name} had a timer but is not in the lobby, deleting their timer...')
             del LobbyTimers[i]
-            i -= 1
             print('Deleted orphaned timer, waiting 5 seconds')
             await asyncio.sleep(5)
         elif LobbyTimers[i].timer_end_utc < utc_timestamp:
@@ -588,7 +585,6 @@ async def evaluate_timers():
             if reacted_message_deleted:
                 print(f'{LobbyTimers[i].display_name} reacted to message {LobbyTimers[i].reacted_message_id} but it no longer exists, deleting their timer...')
                 del LobbyTimers[i]
-                i -= 1
                 print('Deleted orphaned timer, waiting 5 seconds')
                 await asyncio.sleep(5)
             else:
@@ -597,7 +593,6 @@ async def evaluate_timers():
                     await main_lobby_message.remove_reaction(emoji=LobbyTimers[i].reaction_emoji, member=LobbyTimers[i].reacter)
                     print(f'Removed {LobbyTimers[i].reaction_emoji} reaction for {LobbyTimers[i].display_name}!')
                     # role and timer will be removed in on_reaction_remove event
-            i -= 1
             print('Found expired timer, waiting 5 seconds for next check')
             await asyncio.sleep(5)
         else:

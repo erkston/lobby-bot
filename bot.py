@@ -477,6 +477,10 @@ async def activate_lobby(lobby_message, targetindex):
         print(f'Lobby launched! Message ID: {active_lobby_message.id}')
         await bot.change_presence(status=discord.Status.idle, activity=discord.Game(f"{BotGame}"))
         print(f'Updated discord presence to playing {BotGame}')
+        print(f'Clearing timers...')
+        LobbyTimers.clear()
+        if not LobbyTimers:
+            print('Timers are empty!')
         print(f'Sleeping for {PingRemovalTimer} before removing ping message')
         await asyncio.sleep(PingRemovalTimerSeconds)
         print(f'PingRemovalTimer expired, removing ping message')
@@ -519,11 +523,11 @@ async def activate_lobby(lobby_message, targetindex):
             await active_lobby_message.delete()
             LobbyActive = False
             for member in lobby_role.members:
+                print(f'{member.display_name} still had lobby role, removing them...')
                 await member.remove_roles(lobby_role)
-            print('Removed all role members!')
-            LobbyTimers.clear()
-            if not LobbyTimers:
-                print('Timers cleared!')
+            if LobbyTimers:
+                LobbyTimers.clear()
+                print('I had timers but I cleared them')
             await initialize_lobby_message()
             await update_msg(main_lobby_message)
             return

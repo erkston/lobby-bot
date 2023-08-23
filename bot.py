@@ -377,13 +377,16 @@ async def update_servers():
             serverinfo.append(server_a2sinfo)
             print(f'Servers[{i}]: {serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
         except Exception as exc:
-            print(f'EXCEPTION "{exc}" updating server {Servers[i]}!')
+            print(f'Exception: "{exc}" while updating server {Servers[i]}!')
     if not serverinfo:
         print('Unable to get any server information, falling back to 74.91.112.148 and lying about playercount')
         for i in range(len(Servers)):
             serverinfo.append(a2s.info(tuple(["74.91.112.148", 27015])))
-            serverinfo[i].player_count = 0
-            print(f'FALLBACK Servers[{i}]: {serverinfo[i].server_name} currently has {serverinfo[i].player_count} players')
+            if LobbyActive:
+                serverinfo[i].player_count = LobbyThreshold
+            else:
+                serverinfo[i].player_count = 0
+            print(f'FALLBACK Servers[{i}]: {serverinfo[i].server_name} currently has "{serverinfo[i].player_count}" players')
     utc = datetime.datetime.now(timezone.utc)
     server_update_utc_ts = utc.timestamp()
     print(f'Finished updating server information')
@@ -391,7 +394,7 @@ async def update_servers():
 
 
 async def update_msg(lobby_message):
-    if LobbyActive is True:
+    if LobbyActive:
         now = datetime.datetime.now(ZoneInfo(BotTimezone))
         print(f'Lobby is active, no need to update message ' + now.strftime("%Y-%m-%d %H:%M:%S"))
         return
@@ -443,7 +446,7 @@ async def update_msg(lobby_message):
                 else:
                     print(f'We are below the nudge threshold but NudgeMessageEnable is {NudgeMessageEnable}, doing nothing')
             else:
-                print(f'Need more than {NudgeThreshold} players, not nudging')
+                print(f'We need more than {NudgeThreshold} players, not nudging')
         else:
             while UpdatingServerInfo:
                 print(f'Lobby activated while server info is still updating, waiting a sec for it to finish...')

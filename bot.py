@@ -370,6 +370,7 @@ async def update_servers():
     print(f'Updating server information...')
     global serverinfo
     global server_update_utc_ts
+    oldserverinfo = serverinfo[:]
     serverinfo.clear()
     for i in range(len(Servers)):
         try:
@@ -379,13 +380,9 @@ async def update_servers():
         except Exception as exc:
             print(f'Exception: "{exc}" while updating server {Servers[i]}!')
     if not serverinfo:
-        print('Unable to get any server information, falling back to 74.91.112.148 and lying about playercount')
+        print('Unable to get any server information, falling back to last good info...')
+        serverinfo = oldserverinfo[:]
         for i in range(len(Servers)):
-            serverinfo.append(a2s.info(tuple(["74.91.112.148", 27015])))
-            if LobbyActive:
-                serverinfo[i].player_count = LobbyThreshold
-            else:
-                serverinfo[i].player_count = 0
             print(f'FALLBACK Servers[{i}]: {serverinfo[i].server_name} currently has "{serverinfo[i].player_count}" players')
     utc = datetime.datetime.now(timezone.utc)
     server_update_utc_ts = utc.timestamp()

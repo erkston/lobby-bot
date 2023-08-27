@@ -42,6 +42,7 @@ ReactionIntervals = config['ReactionIntervals']
 NudgeMessages = config['NudgeMessages']
 
 # declaring other stuff
+version = "v0.1.6"
 ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 serverinfo = []
@@ -227,6 +228,7 @@ async def lbcfg(ctx):
     if bot_admin_role in ctx.author.roles:
         print(f'Received cfg request from {ctx.author.display_name}, sending them a message...')
         await ctx.author.send(f'Current configuration:\n'
+                              f'Version: {version}\n'
                               f'BotTimezone: {BotTimezone}\n'
                               f'BotGame: {BotGame}\n'
                               f'BotAdminRole : {BotAdminRole}\n'
@@ -258,6 +260,7 @@ async def lbcfg(ctx):
 @bot.event
 async def on_ready():
     print('------------------------------------------------------')
+    print(f'erkston/lobby-bot {version}')
     systemtime = datetime.datetime.now()
     bottime = datetime.datetime.now(ZoneInfo(BotTimezone))
     print(f'System Time: {systemtime.strftime("%Y-%m-%d %H:%M:%S")} Bot Time: {bottime.strftime("%Y-%m-%d %H:%M:%S")} (Timezone: {BotTimezone})')

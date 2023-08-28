@@ -609,48 +609,49 @@ async def evaluate_timers():
 
 
 @bot.event
-async def on_reaction_add(reaction, reacter):
-    if not reacter.bot:
-        if reaction.message.id == main_lobby_message.id:
+async def on_raw_reaction_add(payload):
+    if payload.member != bot.user:
+        if payload.message_id == main_lobby_message.id:
             for i in range(len(ReactionEmojis)):
-                if reaction.emoji == ReactionEmojis[i]:
-                    print(f'New reaction detected: {ReactionEmojis[i]} for {reacter.display_name}')
+                if payload.emoji.name == ReactionEmojis[i]:
+                    print(f'New reaction detected: {ReactionEmojis[i]} for {payload.member.display_name}')
                     # if user already has the role and a timer, remove this reaction but keep them in the lobby
                     # since this removes the reaction it will remove the role as well, so we need to give it back to them
-                    if any(role.id == lobby_role.id for role in reacter.roles) and any(member.user_id == reacter.id for member in LobbyTimers):
-                        print(f'User {reacter.display_name} already has role "{lobby_role.name}" and a timer, removing this reaction...')
-                        await reaction.remove(reacter)
+                    if any(role.id == lobby_role.id for role in payload.member.roles) and any(member.user_id == payload.member.id for member in LobbyTimers):
+                        print(f'User {payload.member.display_name} already has role "{lobby_role.name}" and a timer, removing this reaction...')
+                        await main_lobby_message.remove_reaction(payload.emoji, payload.member)
                         # wait 3 seconds for the reaction remove event to complete before putting member back in lobby
                         await asyncio.sleep(3)
-                        await reacter.add_roles(lobby_role)
-                        print(f'User {reacter.display_name} readded to "{lobby_role.name}"')
+                        await payload.member.add_roles(lobby_role)
+                        print(f'User {payload.member.display_name} readded to "{lobby_role.name}"')
                         await update_msg(main_lobby_message)
                     else:
                         reacted_message_id = main_lobby_message.id
-                        await reacter.add_roles(lobby_role)
-                        print(f'User {reacter.display_name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
-                        if any(member.user_id == reacter.id for member in LobbyTimers):
-                            print(f'User {reacter.display_name} already has a timer registered!')
+                        await payload.member.add_roles(lobby_role)
+                        print(f'User {payload.member.display_name} added to "{lobby_role.name}" for {ReactionIntervals[i]}')
+                        if any(member.user_id == payload.member.id for member in LobbyTimers):
+                            print(f'User {payload.member.display_name} already has a timer registered!')
                         else:
                             utc = datetime.datetime.now(timezone.utc)
                             utc_timestamp = utc.timestamp()
                             timer_end_utc = utc_timestamp + ReactionIntervalsSeconds[i]
-                            LobbyTimers.append(LobbyTimer(reacter, reacter.display_name, reacter.id, ReactionIntervals[i], timer_end_utc, reacted_message_id, utc_timestamp, ReactionEmojis[i]))
-                            print(f'{ReactionEmojis[i]} timer registered for {reacter.display_name} ({ReactionIntervals[i]})')
+                            LobbyTimers.append(LobbyTimer(payload.member, payload.member.display_name, payload.member.id, ReactionIntervals[i], timer_end_utc, reacted_message_id, utc_timestamp, ReactionEmojis[i]))
+                            print(f'{ReactionEmojis[i]} timer registered for {payload.member.display_name} ({ReactionIntervals[i]})')
                             await update_msg(main_lobby_message)
 
 
 @bot.event
-async def on_reaction_remove(reaction, remover):
-    if reaction.message.id == main_lobby_message.id:
+async def on_raw_reaction_remove(payload):
+    if payload.message_id == main_lobby_message.id:
+        remover = discord.Guild.get_member(bot.get_guild(payload.guild_id), payload.user_id)
         for k in range(len(ReactionEmojis)):
-            if reaction.emoji == ReactionEmojis[k]:
+            if payload.emoji.name == ReactionEmojis[k]:
                 print(f'Removed reaction detected: {ReactionEmojis[k]} for {remover.display_name}')
                 await remover.remove_roles(lobby_role)
                 print(f'User {remover.display_name} removed from "{lobby_role.name}" (removed reaction)')
                 j = 0
                 while j < len(LobbyTimers):
-                    if remover.id == LobbyTimers[j].user_id and reaction.emoji == LobbyTimers[j].reaction_emoji:
+                    if remover.id == LobbyTimers[j].user_id and payload.emoji.name == LobbyTimers[j].reaction_emoji:
                         print(f'Matching {ReactionEmojis[k]} timer found for {remover.display_name}, removing...')
                         del LobbyTimers[j]
                         print(f'Timer removed!')

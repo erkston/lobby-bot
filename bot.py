@@ -42,7 +42,7 @@ ReactionIntervals = config['ReactionIntervals']
 NudgeMessages = config['NudgeMessages']
 
 # declaring other stuff
-version = "v0.1.6"
+version = "v0.1.7"
 ReactionIntervalsSeconds = []
 Units = {'s': 'seconds', 'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'weeks'}
 serverinfo = []

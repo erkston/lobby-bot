@@ -1,4 +1,4 @@
-FROM gorialis/discord.py:3.9-alpine-minimal
+FROM python:3.9.18-alpine
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 

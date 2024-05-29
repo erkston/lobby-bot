@@ -51,3 +51,6 @@ Cooldowns/timers need to have units (s, m, or h), colors are in hex, thresholds 
 Depending on the current state of the lobby and which setting you are changing it may update the lobby message immediately, or it may not be visible other than the bot's reply to your command.
 
 /lbcfg will send you a DM with most of the current configuration settings (BotAdminRole still required)
+
+## Docker Images
+See [Dockerhub](https://hub.docker.com/r/erkston/lobby-bot)
